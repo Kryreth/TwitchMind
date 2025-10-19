@@ -4,6 +4,8 @@ import {
   aiAnalysis,
   aiCommands,
   settings,
+  userProfiles,
+  userInsights,
   type ChatMessage,
   type InsertChatMessage,
   type AiAnalysis,
@@ -13,15 +15,36 @@ import {
   type Settings,
   type InsertSettings,
   type ChatMessageWithAnalysis,
+  type UserProfile,
+  type InsertUserProfile,
+  type UserInsight,
+  type InsertUserInsight,
+  type UserProfileWithInsight,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
+  // User Profiles
+  getUserProfile(userId: string): Promise<UserProfile | undefined>;
+  getUserProfileByUsername(username: string): Promise<UserProfile | undefined>;
+  getAllUserProfiles(): Promise<UserProfile[]>;
+  getVipUsers(): Promise<UserProfile[]>;
+  createOrUpdateUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
+  toggleVip(userId: string, isVip: boolean): Promise<UserProfile>;
+  updateUserLastSeen(userId: string): Promise<void>;
+  updateShoutoutTimestamp(userId: string): Promise<void>;
+  
+  // User Insights
+  getUserInsight(userId: string): Promise<UserInsight | undefined>;
+  saveUserInsight(insight: InsertUserInsight): Promise<UserInsight>;
+  getAllUserInsights(): Promise<UserInsight[]>;
+  
   // Chat Messages
   getChatMessages(limit?: number): Promise<ChatMessageWithAnalysis[]>;
   getChatMessageById(id: string): Promise<ChatMessage | undefined>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getMessagesByUser(userId: string, limit?: number): Promise<ChatMessage[]>;
   
   // AI Analysis
   getAiAnalyses(): Promise<AiAnalysis[]>;
@@ -44,6 +67,115 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User Profiles
+  async getUserProfile(userId: string): Promise<UserProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    return profile || undefined;
+  }
+
+  async getUserProfileByUsername(username: string): Promise<UserProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.username, username));
+    return profile || undefined;
+  }
+
+  async getAllUserProfiles(): Promise<UserProfile[]> {
+    return await db.select().from(userProfiles).orderBy(desc(userProfiles.lastSeen));
+  }
+
+  async getVipUsers(): Promise<UserProfile[]> {
+    return await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.isVip, true))
+      .orderBy(desc(userProfiles.lastSeen));
+  }
+
+  async createOrUpdateUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    const existing = await this.getUserProfile(profile.userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userProfiles)
+        .set({ 
+          ...profile, 
+          lastSeen: new Date() 
+        })
+        .where(eq(userProfiles.userId, profile.userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userProfiles)
+        .values(profile)
+        .returning();
+      return created;
+    }
+  }
+
+  async toggleVip(userId: string, isVip: boolean): Promise<UserProfile> {
+    const [updated] = await db
+      .update(userProfiles)
+      .set({ isVip })
+      .where(eq(userProfiles.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async updateUserLastSeen(userId: string): Promise<void> {
+    await db
+      .update(userProfiles)
+      .set({ lastSeen: new Date() })
+      .where(eq(userProfiles.userId, userId));
+  }
+
+  async updateShoutoutTimestamp(userId: string): Promise<void> {
+    await db
+      .update(userProfiles)
+      .set({ shoutoutLastGiven: new Date() })
+      .where(eq(userProfiles.userId, userId));
+  }
+
+  // User Insights
+  async getUserInsight(userId: string): Promise<UserInsight | undefined> {
+    const [insight] = await db
+      .select()
+      .from(userInsights)
+      .where(eq(userInsights.userId, userId));
+    return insight || undefined;
+  }
+
+  async saveUserInsight(insight: InsertUserInsight): Promise<UserInsight> {
+    const existing = await this.getUserInsight(insight.userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userInsights)
+        .set({ 
+          ...insight, 
+          lastUpdated: new Date() 
+        })
+        .where(eq(userInsights.userId, insight.userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userInsights)
+        .values(insight)
+        .returning();
+      return created;
+    }
+  }
+
+  async getAllUserInsights(): Promise<UserInsight[]> {
+    return await db.select().from(userInsights);
+  }
+
   // Chat Messages
   async getChatMessages(limit: number = 100): Promise<ChatMessageWithAnalysis[]> {
     const messages = await db
@@ -75,6 +207,15 @@ export class DatabaseStorage implements IStorage {
       .values(insertMessage)
       .returning();
     return message;
+  }
+
+  async getMessagesByUser(userId: string, limit: number = 50): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.userId, userId))
+      .orderBy(desc(chatMessages.timestamp))
+      .limit(limit);
   }
 
   // AI Analysis

@@ -4,16 +4,44 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
-// Chat Messages Table
+// User Profiles Table - Track VIP/Mod/Subscriber status
+export const userProfiles = pgTable("user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull().unique(), // Twitch user ID
+  username: text("username").notNull(),
+  isVip: boolean("is_vip").notNull().default(false),
+  isMod: boolean("is_mod").notNull().default(false),
+  isSubscriber: boolean("is_subscriber").notNull().default(false),
+  channelPointsBalance: integer("channel_points_balance").default(0),
+  wasAnonymous: boolean("was_anonymous").notNull().default(false),
+  firstSeen: timestamp("first_seen").notNull().defaultNow(),
+  lastSeen: timestamp("last_seen").notNull().defaultNow(),
+  shoutoutLastGiven: timestamp("shoutout_last_given"),
+});
+
+// User Insights Table - AI Learning Engine
+export const userInsights = pgTable("user_insights", {
+  userId: text("user_id").primaryKey(), // References userProfiles.userId
+  summary: text("summary"), // AI-generated personality summary
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+  totalMessages: integer("total_messages").notNull().default(0),
+  recentTags: jsonb("recent_tags").$type<string[]>().default(sql`'[]'::jsonb`),
+});
+
+// Chat Messages Table - Enhanced with stream tracking
 export const chatMessages = pgTable("chat_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id"), // Twitch user ID (may be null for anonymous)
   username: text("username").notNull(),
   message: text("message").notNull(),
   channel: text("channel").notNull(),
+  streamId: text("stream_id"), // Unique per streaming session
+  eventType: text("event_type").notNull().default("chat"), // chat, redeem, raid, sub, etc.
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   userColor: text("user_color"),
   badges: jsonb("badges").$type<Record<string, string>>(),
   emotes: jsonb("emotes"),
+  metadata: jsonb("metadata"), // Additional event-specific data
 });
 
 // AI Analysis Table
@@ -38,7 +66,7 @@ export const aiCommands = pgTable("ai_commands", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Settings Table
+// Settings Table - Enhanced with DachiPool configuration
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   twitchChannel: text("twitch_channel"),
@@ -46,6 +74,19 @@ export const settings = pgTable("settings", {
   autoModeration: boolean("auto_moderation").notNull().default(false),
   sentimentThreshold: integer("sentiment_threshold").notNull().default(2), // 1-5
   enableAiAnalysis: boolean("enable_ai_analysis").notNull().default(true),
+  
+  // DachiPool Settings
+  dachipoolEnabled: boolean("dachipool_enabled").notNull().default(true),
+  dachipoolMaxChars: integer("dachipool_max_chars").notNull().default(1000),
+  dachipoolEnergy: text("dachipool_energy").notNull().default("Balanced"), // Balanced, High, Low
+  dachipoolMode: text("dachipool_mode").notNull().default("Auto"), // Auto, Manual
+  dachipoolShoutoutCooldownHours: integer("dachipool_shoutout_cooldown_hours").notNull().default(24),
+  dachipoolOpenaiModel: text("dachipool_openai_model").notNull().default("gpt-4o-mini"),
+  dachipoolOpenaiTemp: integer("dachipool_openai_temp").notNull().default(7), // Stored as 0-10, divide by 10
+  dachipoolElevenlabsEnabled: boolean("dachipool_elevenlabs_enabled").notNull().default(false),
+  dachipoolElevenlabsVoice: text("dachipool_elevenlabs_voice").default("Default"),
+  autoShoutoutsEnabled: boolean("auto_shoutouts_enabled").notNull().default(true),
+  
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
@@ -65,6 +106,16 @@ export const aiAnalysisRelations = relations(aiAnalysis, ({ one }) => ({
 }));
 
 // Insert Schemas
+export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
+  id: true,
+  firstSeen: true,
+  lastSeen: true,
+});
+
+export const insertUserInsightSchema = createInsertSchema(userInsights).omit({
+  lastUpdated: true,
+});
+
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   id: true,
   timestamp: true,
@@ -87,6 +138,12 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 });
 
 // Types
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+
+export type UserInsight = typeof userInsights.$inferSelect;
+export type InsertUserInsight = z.infer<typeof insertUserInsightSchema>;
+
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 
@@ -102,4 +159,8 @@ export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 // Extended types for frontend
 export type ChatMessageWithAnalysis = ChatMessage & {
   analysis?: AiAnalysis;
+};
+
+export type UserProfileWithInsight = UserProfile & {
+  insight?: UserInsight;
 };

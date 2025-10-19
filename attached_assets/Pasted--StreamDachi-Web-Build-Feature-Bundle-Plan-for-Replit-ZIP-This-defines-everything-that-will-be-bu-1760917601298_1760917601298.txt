@@ -1,0 +1,108 @@
+✅ StreamDachi Web Build: Feature Bundle Plan for Replit ZIP
+
+This defines everything that will be bundled into your next Replit-ready .zip export.
+
+🧠 User Profile + Role Tracking
+
+Each Twitch user will be tracked with:
+
+username
+
+user_id (Twitch)
+
+is_vip ✅
+
+is_mod ✅
+
+is_subscriber
+
+channel_points_balance (if accessible)
+
+was_anonymous (for redemptions w/o user)
+
+first_seen, last_seen timestamps
+
+shoutout_last_given (for auto-shoutout cooldown)
+
+📣 Shout-Out VIP System
+
+VIPs receive automatic shoutouts on first interaction (once every 24h)
+
+Events: chat message, raid, redeem, sub
+
+Tracks shoutout_last_given to prevent spam
+
+Tied into is_vip flag in database
+
+New UI Tab: “Shout-Out VIPs”
+
+➕ Add VIP by username
+
+➖ Remove from list
+
+✅ Enable/disable shoutout automation
+
+⏱ See cooldowns per user
+
+💬 Per-Stream Chat Message Logging
+
+New table: chat_messages
+
+Stores every chat interaction per stream, including:
+
+chat_messages (
+  id SERIAL,
+  user_id TEXT,
+  username TEXT,
+  message TEXT,
+  timestamp TIMESTAMP,
+  stream_id TEXT,
+  event_type TEXT,   -- "chat", "redeem", etc.
+  emotes JSONB,
+  metadata JSONB
+)
+
+
+Real-time logging of Twitch messages
+
+Used for moderation, insights, and audit logs
+
+🧠 AI User Learning Engine
+
+New table: user_insights
+
+Each user’s behavior is summarized by the AI every few minutes:
+
+user_insights (
+  user_id TEXT PRIMARY KEY,
+  summary TEXT,                -- e.g. "Playful, emote-heavy"
+  last_updated TIMESTAMP,
+  total_messages INT,
+  recent_tags TEXT[]
+)
+
+
+AI Summary Prompt (automated every N minutes):
+
+“Summarize @{username}’s tone, behavior, and chat style in 1–2 sentences for in-stream personalization.”
+
+These insights power:
+
+✨ Personalized AI replies
+
+🎯 Targeted shoutouts
+
+🚨 Flagging of sudden behavior shifts
+
+🧾 Configurable Settings (.env or config.ts)
+DACHIPOOL_ENABLED=true
+DACHIPOOL_MAX_CHARS=1000
+DACHIPOOL_ENERGY=Balanced
+DACHIPOOL_MODE=Auto
+DACHIPOOL_SHOUTOUT_COOLDOWN_HOURS=24
+DACHIPOOL_OPENAI_MODEL=gpt-4o-mini
+DACHIPOOL_OPENAI_TEMP=0.7
+DACHIPOOL_ELEVENLABS_ENABLED=true
+DACHIPOOL_ELEVENLABS_VOICE=Default
+DACHIPOOL_TWITCH_CLIENT_ID=...
+DACHIPOOL_TWITCH_CLIENT_SECRET=...
