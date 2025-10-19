@@ -1,4 +1,4 @@
-import { ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, CpuChipIcon, PresentationChartLineIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, CpuChipIcon, PresentationChartLineIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { SiTwitch } from "react-icons/si";
 import {
   Sidebar,
@@ -32,6 +32,11 @@ const menuItems = [
     title: "AI Controls",
     url: "/ai-controls",
     icon: CpuChipIcon,
+  },
+  {
+    title: "VIP Management",
+    url: "/vip-management",
+    icon: ShieldCheckIcon,
   },
   {
     title: "Settings",

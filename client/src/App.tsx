@@ -11,6 +11,7 @@ import LiveChat from "@/pages/live-chat";
 import Analytics from "@/pages/analytics";
 import AiControls from "@/pages/ai-controls";
 import SettingsPage from "@/pages/settings";
+import VIPManagement from "@/pages/vip-management";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/chat" component={LiveChat} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/ai-controls" component={AiControls} />
+      <Route path="/vip-management" component={VIPManagement} />
       <Route path="/settings" component={SettingsPage} />
     </Switch>
   );
