@@ -45,9 +45,49 @@ export async function connectToTwitch(channel: string, username: string = "justi
 
     const username = tags["display-name"] || tags.username || "Anonymous";
     const userColor = tags.color || "#9146FF";
+    const userId = tags["user-id"] || `anonymous_${username}`;
+    
+    const badges = tags.badges || {};
+    const isVip = badges.vip === "1" || false;
+    const isMod = badges.moderator === "1" || badges.broadcaster === "1" || false;
+    const isSubscriber = badges.subscriber !== undefined || badges.founder !== undefined || false;
 
     try {
+      await storage.createOrUpdateUserProfile({
+        userId,
+        username,
+        isVip,
+        isMod,
+        isSubscriber,
+        wasAnonymous: !tags["user-id"],
+      });
+
+      await storage.updateUserLastSeen(userId);
+
+      const settingsList = await storage.getSettings();
+      const settings = settingsList.length > 0 ? settingsList[0] : null;
+      
+      if (settings && settings.autoShoutoutsEnabled && isVip) {
+        const userProfile = await storage.getUserProfile(userId);
+        if (userProfile) {
+          const cooldownHours = settings.dachipoolShoutoutCooldownHours || 24;
+          const cooldownMs = cooldownHours * 60 * 60 * 1000;
+          const now = new Date().getTime();
+          const lastShoutout = userProfile.shoutoutLastGiven?.getTime() || 0;
+          
+          if (now - lastShoutout > cooldownMs) {
+            await storage.updateShoutoutTimestamp(userId);
+            const shoutoutMessage = `🎉 Welcome VIP @${username}! Thanks for being amazing! 💜`;
+            broadcastToClients("auto_shoutout", {
+              username,
+              message: shoutoutMessage,
+            });
+          }
+        }
+      }
+
       const chatMessage = await storage.createChatMessage({
+        userId,
         username,
         message,
         channel,
@@ -56,8 +96,7 @@ export async function connectToTwitch(channel: string, username: string = "justi
         emotes: tags.emotes || null,
       });
 
-      const settingsList = await storage.getSettings();
-      const enableAiAnalysis = settingsList.length > 0 ? settingsList[0].enableAiAnalysis : true;
+      const enableAiAnalysis = settings ? settings.enableAiAnalysis : true;
 
       let analysis = null;
       if (enableAiAnalysis) {

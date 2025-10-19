@@ -8,6 +8,8 @@ import {
   insertAiAnalysisSchema,
   insertAiCommandSchema,
   insertSettingsSchema,
+  insertUserProfileSchema,
+  insertUserInsightSchema,
 } from "@shared/schema";
 import { connectToTwitch, disconnectFromTwitch, addWebSocketClient } from "./twitch-client";
 
@@ -97,6 +99,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting command:", error);
       res.status(400).json({ error: "Failed to delete command" });
+    }
+  });
+
+  // User Profiles
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUserProfiles();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/users/vips", async (req, res) => {
+    try {
+      const vips = await storage.getVipUsers();
+      res.json(vips);
+    } catch (error) {
+      console.error("Error fetching VIPs:", error);
+      res.status(500).json({ error: "Failed to fetch VIPs" });
+    }
+  });
+
+  app.get("/api/users/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUserProfile(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.post("/api/users", async (req, res) => {
+    try {
+      const data = insertUserProfileSchema.parse(req.body);
+      const user = await storage.createOrUpdateUserProfile(data);
+      res.json(user);
+    } catch (error) {
+      console.error("Error creating/updating user:", error);
+      res.status(400).json({ error: "Invalid user data" });
+    }
+  });
+
+  app.patch("/api/users/:userId/vip", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { isVip } = req.body;
+      const user = await storage.toggleVip(userId, isVip);
+      res.json(user);
+    } catch (error) {
+      console.error("Error toggling VIP status:", error);
+      res.status(400).json({ error: "Failed to update VIP status" });
+    }
+  });
+
+  // User Insights
+  app.get("/api/insights", async (req, res) => {
+    try {
+      const insights = await storage.getAllUserInsights();
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching insights:", error);
+      res.status(500).json({ error: "Failed to fetch insights" });
+    }
+  });
+
+  app.get("/api/insights/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const insight = await storage.getUserInsight(userId);
+      if (!insight) {
+        return res.status(404).json({ error: "Insight not found" });
+      }
+      res.json(insight);
+    } catch (error) {
+      console.error("Error fetching insight:", error);
+      res.status(500).json({ error: "Failed to fetch insight" });
+    }
+  });
+
+  app.post("/api/insights", async (req, res) => {
+    try {
+      const data = insertUserInsightSchema.parse(req.body);
+      const insight = await storage.saveUserInsight(data);
+      res.json(insight);
+    } catch (error) {
+      console.error("Error saving insight:", error);
+      res.status(400).json({ error: "Invalid insight data" });
     }
   });
 
