@@ -11,7 +11,7 @@ import {
   insertUserProfileSchema,
   insertUserInsightSchema,
 } from "@shared/schema";
-import { connectToTwitch, disconnectFromTwitch, addWebSocketClient } from "./twitch-client";
+import { connectToTwitch, disconnectFromTwitch, addWebSocketClient, getTwitchClient } from "./twitch-client";
 import { twitchOAuthService } from "./twitch-oauth-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {

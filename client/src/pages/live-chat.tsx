@@ -6,6 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { ChatMessageWithAnalysis } from "@shared/schema";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+interface TwitchStatus {
+  connected: boolean;
+  channel: string | null;
+  messageCount: number;
+}
+
 export default function LiveChat() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -13,6 +19,11 @@ export default function LiveChat() {
   const { data: messages = [], isLoading } = useQuery<ChatMessageWithAnalysis[]>({
     queryKey: ["/api/messages"],
     refetchInterval: 2000,
+  });
+
+  const { data: status } = useQuery<TwitchStatus>({
+    queryKey: ["/api/twitch/status"],
+    refetchInterval: 3000,
   });
 
   useEffect(() => {
@@ -40,10 +51,17 @@ export default function LiveChat() {
               Monitor your Twitch chat in real-time
             </p>
           </div>
-          <Badge variant="secondary" className="gap-2" data-testid="badge-connection-status">
-            <div className="h-2 w-2 rounded-full bg-chart-2 animate-pulse" />
-            Live
-          </Badge>
+          {status?.connected ? (
+            <Badge variant="secondary" className="gap-2" data-testid="badge-connection-status">
+              <div className="h-2 w-2 rounded-full bg-chart-2 animate-pulse" />
+              Connected to {status.channel}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-2" data-testid="badge-connection-status">
+              <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+              Not Connected
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -69,7 +87,11 @@ export default function LiveChat() {
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-2">
               <p className="text-sm text-muted-foreground">No messages yet</p>
-              <p className="text-xs text-muted-foreground">Messages will appear here when your chat is active</p>
+              {status?.connected ? (
+                <p className="text-xs text-muted-foreground">Monitoring {status.channel} - messages will appear as they come in</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Log in with Twitch to start monitoring chat</p>
+              )}
             </div>
           ) : (
             <ScrollArea className="h-full" ref={scrollAreaRef} onScrollCapture={handleScroll}>
