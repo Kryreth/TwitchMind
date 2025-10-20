@@ -106,6 +106,7 @@ app.use((req, res, next) => {
               temperature: (settings.dachipoolOpenaiTemp || 7) / 10,
               maxChars: settings.dachipoolMaxChars || 1000,
               energy: settings.dachipoolEnergy || "Balanced",
+              personality: settings.aiPersonality || "Casual",
               topicAllowlist: settings.topicAllowlist as string[] || [],
               topicBlocklist: settings.topicBlocklist as string[] || [],
               streamerVoiceOnlyMode: settings.streamerVoiceOnlyMode || false,

@@ -1,15 +1,16 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { AiCommand, InsertAiCommand } from "@shared/schema";
+import type { AiCommand, InsertAiCommand, Settings, InsertSettings } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, TrashIcon, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -35,9 +36,27 @@ export default function AiControls() {
   const [prompt, setPrompt] = useState("");
   const [responseType, setResponseType] = useState("direct");
 
+  // OpenAI Settings
+  const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
+  const [temperature, setTemperature] = useState([7]);
+  const [aiPersonality, setAiPersonality] = useState("Casual");
+
   const { data: commands = [], isLoading } = useQuery<AiCommand[]>({
     queryKey: ["/api/commands"],
   });
+
+  const { data: settings } = useQuery<Settings[]>({
+    queryKey: ["/api/settings"],
+  });
+
+  useEffect(() => {
+    if (settings && settings.length > 0) {
+      const setting = settings[0];
+      setOpenaiModel(setting.dachipoolOpenaiModel || "gpt-4o-mini");
+      setTemperature([setting.dachipoolOpenaiTemp || 7]);
+      setAiPersonality(setting.aiPersonality || "Casual");
+    }
+  }, [settings]);
 
   const createCommandMutation = useMutation({
     mutationFn: (data: InsertAiCommand) => apiRequest("POST", "/api/commands", data),
@@ -80,6 +99,35 @@ export default function AiControls() {
     },
   });
 
+  const updateAiSettingsMutation = useMutation({
+    mutationFn: (data: Partial<InsertSettings>) => 
+      settings && settings.length > 0
+        ? apiRequest("PATCH", `/api/settings/${settings[0].id}`, data)
+        : apiRequest("POST", "/api/settings", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "AI Settings saved",
+        description: "Your AI configuration has been updated.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save AI settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveAiSettings = () => {
+    updateAiSettingsMutation.mutate({
+      dachipoolOpenaiModel: openaiModel,
+      dachipoolOpenaiTemp: temperature[0],
+      aiPersonality,
+    });
+  };
+
   const handleCreateCommand = () => {
     if (!trigger || !prompt) {
       toast({
@@ -98,13 +146,107 @@ export default function AiControls() {
     });
   };
 
+  const personalityDescriptions: Record<string, string> = {
+    Casual: "Friendly and relaxed, like chatting with a friend",
+    Comedy: "Witty and humorous, always ready with a joke",
+    Quirky: "Unique and playful with unexpected responses",
+    Serious: "Professional and focused, straight to the point",
+    Gaming: "Energetic gamer vibes with gaming references",
+    Professional: "Polished and business-like communication",
+  };
+
   return (
     <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground" data-testid="page-title-ai-controls">AI Controls</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure AI personality, model settings, and custom commands
+        </p>
+      </div>
+
+      <Card data-testid="card-ai-settings">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg font-semibold">AI Configuration</CardTitle>
+          </div>
+          <CardDescription>
+            Customize how your AI assistant responds to chat
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="personality">AI Personality</Label>
+              <Select value={aiPersonality} onValueChange={setAiPersonality}>
+                <SelectTrigger id="personality" data-testid="select-personality">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Casual">🙂 Casual</SelectItem>
+                  <SelectItem value="Comedy">😄 Comedy</SelectItem>
+                  <SelectItem value="Quirky">🎨 Quirky</SelectItem>
+                  <SelectItem value="Serious">🎯 Serious</SelectItem>
+                  <SelectItem value="Gaming">🎮 Gaming</SelectItem>
+                  <SelectItem value="Professional">💼 Professional</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {personalityDescriptions[aiPersonality]}
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="model">OpenAI Model</Label>
+                <Select value={openaiModel} onValueChange={setOpenaiModel}>
+                  <SelectTrigger id="model" data-testid="select-model">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</SelectItem>
+                    <SelectItem value="gpt-4o">GPT-4o (Balanced)</SelectItem>
+                    <SelectItem value="gpt-4-turbo">GPT-4 Turbo (Advanced)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="temperature">Creativity: {(temperature[0] / 10).toFixed(1)}</Label>
+                <Slider
+                  id="temperature"
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={temperature}
+                  onValueChange={setTemperature}
+                  data-testid="slider-temperature"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Predictable</span>
+                  <span>Creative</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSaveAiSettings}
+              disabled={updateAiSettingsMutation.isPending}
+              data-testid="button-save-ai-settings"
+            >
+              {updateAiSettingsMutation.isPending ? "Saving..." : "Save AI Settings"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground" data-testid="page-title-ai-controls">AI Controls</h1>
+          <h2 className="text-xl font-semibold">Custom Commands</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Configure AI commands and moderation settings
+            Create AI commands triggered by chat messages
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

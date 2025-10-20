@@ -332,7 +332,7 @@ export default function SettingsPage() {
       <Card data-testid="card-dachipool-settings">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">DachiPool Configuration</CardTitle>
-          <CardDescription>Customize AI behavior and shoutout settings</CardDescription>
+          <CardDescription>Customize AI behavior and shoutout settings (For AI model and personality, see AI Controls)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -428,26 +428,6 @@ export default function SettingsPage() {
                   step={1}
                   data-testid="slider-shoutout-cooldown"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label>OpenAI Temperature</Label>
-                  <span className="text-sm text-muted-foreground" data-testid="text-temp-value">
-                    {(dachipoolOpenaiTemp[0] / 10).toFixed(1)}
-                  </span>
-                </div>
-                <Slider
-                  value={dachipoolOpenaiTemp}
-                  onValueChange={setDachipoolOpenaiTemp}
-                  min={0}
-                  max={10}
-                  step={1}
-                  data-testid="slider-openai-temp"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Higher values make AI more creative
-                </p>
               </div>
 
               <div className="flex items-center justify-between">

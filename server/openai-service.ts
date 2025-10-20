@@ -84,6 +84,7 @@ export interface DachiStreamSettings {
   temperature: number;
   maxChars: number;
   energy: string;
+  personality: string;
   topicAllowlist: string[];
   topicBlocklist: string[];
   streamerVoiceOnlyMode: boolean;
@@ -98,23 +99,27 @@ export async function generateDachiStreamResponse(
     // Build system message with guardrails
     const systemParts: string[] = [];
 
-    // Core personality based on energy level
+    // Core personality traits based on selected personality
+    const personalityPrompts: Record<string, string> = {
+      Casual: "You are DachiDachi, a friendly and relaxed AI chat companion. Respond like you're chatting with friends - keep it chill, casual, and conversational.",
+      Comedy: "You are DachiDachi, a witty and humorous AI chat companion. Make jokes, use puns, and keep the vibe light and funny. Don't be afraid to be silly!",
+      Quirky: "You are DachiDachi, a unique and playful AI chat companion. Be creative, unexpected, and add fun twists to your responses. Embrace the weird and wonderful!",
+      Serious: "You are DachiDachi, a professional and focused AI chat companion. Be direct, informative, and to-the-point. Keep responses clear and helpful.",
+      Gaming: "You are DachiDachi, an energetic gamer AI companion. Use gaming references, talk about strategies, and match the competitive gaming vibe. Let's go!",
+      Professional: "You are DachiDachi, a polished and business-like AI chat companion. Maintain a professional tone, be articulate, and communicate with clarity.",
+    };
+
+    const basePersonality = personalityPrompts[settings.personality] || personalityPrompts.Casual;
+    
+    // Modify energy level based on settings
+    let energyModifier = "";
     if (settings.energy === "High") {
-      systemParts.push(
-        "You are DachiDachi, an energetic and enthusiastic AI chat companion for a Twitch stream. " +
-        "Respond with high energy, excitement, and lots of personality. Keep responses engaging and fun!"
-      );
+      energyModifier = " Respond with extra energy, excitement, and enthusiasm!";
     } else if (settings.energy === "Low") {
-      systemParts.push(
-        "You are DachiDachi, a chill and laid-back AI chat companion for a Twitch stream. " +
-        "Respond with a calm, relaxed tone. Keep responses brief and casual."
-      );
-    } else {
-      systemParts.push(
-        "You are DachiDachi, a friendly AI chat companion for a Twitch stream. " +
-        "Respond naturally with a balanced tone. Be helpful and engaging without being overwhelming."
-      );
+      energyModifier = " Keep your responses brief and calm.";
     }
+
+    systemParts.push(basePersonality + energyModifier);
 
     // Topic guardrails
     if (settings.topicAllowlist.length > 0) {
