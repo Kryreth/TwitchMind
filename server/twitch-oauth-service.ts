@@ -15,7 +15,9 @@ export interface TwitchUser {
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID || '';
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || '';
-const REDIRECT_URI = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/auth/twitch/callback`;
+const REDIRECT_URI = process.env.REPLIT_DEV_DOMAIN 
+  ? `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/twitch/callback`
+  : 'http://localhost:5000/api/auth/twitch/callback';
 
 export class TwitchOAuthService {
   /**
