@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -18,16 +20,33 @@ interface Settings {
   useDatabasePersonalization: boolean;
   streamerVoiceOnlyMode: boolean;
   dachiastreamSelectionStrategy: string;
+  dachipoolEnabled: boolean;
+  dachipoolMaxChars: number;
+  dachipoolEnergy: string;
+  dachipoolMode: string;
+  dachipoolShoutoutCooldownHours: number;
+  dachipoolElevenlabsEnabled: boolean;
+  autoShoutoutsEnabled: boolean;
 }
 
 export default function DachiStream() {
   const { toast } = useToast();
   
+  // DachiStream settings
   const [topicAllowlist, setTopicAllowlist] = useState<string[]>(["gaming", "anime", "chatting"]);
   const [topicBlocklist, setTopicBlocklist] = useState<string[]>(["politics", "religion"]);
   const [useDatabasePersonalization, setUseDatabasePersonalization] = useState(true);
   const [streamerVoiceOnlyMode, setStreamerVoiceOnlyMode] = useState(false);
   const [dachiastreamSelectionStrategy, setDachiastreamSelectionStrategy] = useState("most_active");
+  
+  // DachiPool settings
+  const [dachipoolEnabled, setDachipoolEnabled] = useState(true);
+  const [dachipoolMaxChars, setDachipoolMaxChars] = useState([1000]);
+  const [dachipoolEnergy, setDachipoolEnergy] = useState("Balanced");
+  const [dachipoolMode, setDachipoolMode] = useState("Auto");
+  const [dachipoolShoutoutCooldownHours, setDachipoolShoutoutCooldownHours] = useState([24]);
+  const [dachipoolElevenlabsEnabled, setDachipoolElevenlabsEnabled] = useState(false);
+  const [autoShoutoutsEnabled, setAutoShoutoutsEnabled] = useState(true);
 
   const { data: settings } = useQuery<Settings[]>({
     queryKey: ["/api/settings"],
@@ -41,6 +60,14 @@ export default function DachiStream() {
       setUseDatabasePersonalization(setting.useDatabasePersonalization ?? true);
       setStreamerVoiceOnlyMode(setting.streamerVoiceOnlyMode ?? false);
       setDachiastreamSelectionStrategy(setting.dachiastreamSelectionStrategy || "most_active");
+      
+      setDachipoolEnabled(setting.dachipoolEnabled ?? true);
+      setDachipoolMaxChars([setting.dachipoolMaxChars || 1000]);
+      setDachipoolEnergy(setting.dachipoolEnergy || "Balanced");
+      setDachipoolMode(setting.dachipoolMode || "Auto");
+      setDachipoolShoutoutCooldownHours([setting.dachipoolShoutoutCooldownHours || 24]);
+      setDachipoolElevenlabsEnabled(setting.dachipoolElevenlabsEnabled ?? false);
+      setAutoShoutoutsEnabled(setting.autoShoutoutsEnabled ?? true);
     }
   }, [settings]);
 
@@ -71,6 +98,13 @@ export default function DachiStream() {
       useDatabasePersonalization,
       streamerVoiceOnlyMode,
       dachiastreamSelectionStrategy,
+      dachipoolEnabled,
+      dachipoolMaxChars: dachipoolMaxChars[0],
+      dachipoolEnergy,
+      dachipoolMode,
+      dachipoolShoutoutCooldownHours: dachipoolShoutoutCooldownHours[0],
+      dachipoolElevenlabsEnabled,
+      autoShoutoutsEnabled,
     });
   };
 
@@ -180,6 +214,202 @@ export default function DachiStream() {
                 Topics the AI will avoid
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-general-config">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">General Configuration</CardTitle>
+          <CardDescription>Core AI behavior settings</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="dachipool-enabled">Enable DachiPool</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Activate enhanced AI features
+                  </p>
+                </div>
+                <Switch
+                  id="dachipool-enabled"
+                  checked={dachipoolEnabled}
+                  onCheckedChange={setDachipoolEnabled}
+                  data-testid="switch-dachipool-enabled"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="energy">Energy Level</Label>
+                <Select value={dachipoolEnergy} onValueChange={setDachipoolEnergy}>
+                  <SelectTrigger id="energy" data-testid="select-energy">
+                    <SelectValue placeholder="Select energy level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Balanced">Balanced</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mode">Mode</Label>
+                <Select value={dachipoolMode} onValueChange={setDachipoolMode}>
+                  <SelectTrigger id="mode" data-testid="select-mode">
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Auto">Auto</SelectItem>
+                    <SelectItem value="Manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Max Characters</Label>
+                  <span className="text-sm text-muted-foreground" data-testid="text-max-chars-value">
+                    {dachipoolMaxChars[0]}
+                  </span>
+                </div>
+                <Slider
+                  value={dachipoolMaxChars}
+                  onValueChange={setDachipoolMaxChars}
+                  min={100}
+                  max={2000}
+                  step={100}
+                  data-testid="slider-max-chars"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum length for AI responses
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-shoutouts-tts">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Shoutouts & Text-to-Speech</CardTitle>
+          <CardDescription>Configure automatic greetings and voice synthesis</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="auto-shoutouts">Auto Shoutouts</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Greet VIPs automatically
+                  </p>
+                </div>
+                <Switch
+                  id="auto-shoutouts"
+                  checked={autoShoutoutsEnabled}
+                  onCheckedChange={setAutoShoutoutsEnabled}
+                  data-testid="switch-auto-shoutouts"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="elevenlabs">ElevenLabs TTS</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable voice synthesis
+                  </p>
+                </div>
+                <Switch
+                  id="elevenlabs"
+                  checked={dachipoolElevenlabsEnabled}
+                  onCheckedChange={setDachipoolElevenlabsEnabled}
+                  data-testid="switch-elevenlabs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Shoutout Cooldown (hours)</Label>
+                  <span className="text-sm text-muted-foreground" data-testid="text-cooldown-value">
+                    {dachipoolShoutoutCooldownHours[0]}h
+                  </span>
+                </div>
+                <Slider
+                  value={dachipoolShoutoutCooldownHours}
+                  onValueChange={setDachipoolShoutoutCooldownHours}
+                  min={1}
+                  max={168}
+                  step={1}
+                  data-testid="slider-shoutout-cooldown"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Time between automatic greetings for VIPs
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-message-priority">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Message Priority System</CardTitle>
+          <CardDescription>Configure which types of messages get priority for AI responses</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+              <Badge variant="secondary" className="min-w-12 justify-center">1st</Badge>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Moderators & Mods</p>
+                <p className="text-xs text-muted-foreground">Highest priority - Staff and channel moderators</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+              <Badge variant="secondary" className="min-w-12 justify-center">2nd</Badge>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Raids</p>
+                <p className="text-xs text-muted-foreground">Raiding viewers and raid events</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+              <Badge variant="secondary" className="min-w-12 justify-center">3rd</Badge>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">VIP Members</p>
+                <p className="text-xs text-muted-foreground">Users with VIP badge or artist badge</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+              <Badge variant="secondary" className="min-w-12 justify-center">4th</Badge>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Subscribers & Bit Users</p>
+                <p className="text-xs text-muted-foreground">Subscription-based or bit-based messages</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+              <Badge variant="secondary" className="min-w-12 justify-center">5th</Badge>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Regular Viewers</p>
+                <p className="text-xs text-muted-foreground">Standard chat messages and redeems</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-muted/50 rounded-md border border-border">
+            <p className="text-sm text-foreground">
+              The AI will prioritize responding to messages based on this hierarchy. When multiple messages arrive within the 15-second cycle, higher priority messages are selected first.
+            </p>
           </div>
         </CardContent>
       </Card>
