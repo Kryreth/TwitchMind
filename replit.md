@@ -8,6 +8,28 @@ StreamDachi is a comprehensive Twitch integration app with AI-powered features i
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (October 2025)
+
+### DachiStream Settings Reorganization
+- **New DachiStream Page**: Created dedicated `/dachistream` page for all DachiStream-related configuration
+- **Settings Page Cleanup**: Removed DachiStream and Topic Filter sections from Settings page for better organization
+- **DachiStream Settings Include**:
+  - Message Selection Strategy (most_active, random, new_chatter)
+  - Response Modes (Database Personalization, Streamer Voice-Only Mode)
+  - Topic Filters (Allowed Topics, Blocked Topics)
+- **Navigation**: Added DachiStream menu item to sidebar with Bolt icon
+
+### AI Personality System
+- **AI Controls Page Enhancement**: Moved OpenAI model and temperature settings from Settings to AI Controls
+- **Personality Selection**: Added 6 personality options that customize AI response tone:
+  - Casual: Friendly, relaxed, conversational
+  - Comedy: Witty, humorous, joke-focused
+  - Quirky: Creative, unexpected, playful
+  - Serious: Professional, focused, direct
+  - Gaming: Energetic with gaming references
+  - Professional: Polished, business-like, articulate
+- **Integration**: Personality setting affects all AI responses through DachiStream service
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -26,7 +48,7 @@ Preferred communication style: Simple, everyday language.
 
 **Routing**: Wouter for client-side routing
 - Lightweight alternative to React Router
-- Six main pages: Dashboard, Live Chat, Analytics, AI Controls, VIP Management, Settings
+- Seven main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, Settings
 
 **Styling**: Tailwind CSS with custom design tokens
 - CSS variables for theming
