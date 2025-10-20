@@ -116,7 +116,7 @@ export default function Dashboard() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Characters Used</span>
                 <span className="font-medium" data-testid="text-usage-count">
-                  {elevenLabsUsage.characterCount.toLocaleString()} / {elevenLabsUsage.characterLimit.toLocaleString()}
+                  {(elevenLabsUsage.characterCount || 0).toLocaleString()} / {(elevenLabsUsage.characterLimit || 10000).toLocaleString()}
                 </span>
               </div>
               <Progress 
@@ -127,7 +127,7 @@ export default function Dashboard() {
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{usagePercentage}% used</span>
                 <span data-testid="text-remaining-count">
-                  {elevenLabsUsage.quotaRemaining.toLocaleString()} remaining
+                  {(elevenLabsUsage.quotaRemaining || 10000).toLocaleString()} remaining
                 </span>
               </div>
             </div>

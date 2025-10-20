@@ -228,8 +228,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const setting = await storage.updateSettings(id, req.body);
       
+      // Try to reconnect to Twitch, but don't fail the settings save if it errors
       if (req.body.twitchChannel && req.body.twitchUsername) {
-        await connectToTwitch(req.body.twitchChannel, req.body.twitchUsername);
+        try {
+          await connectToTwitch(req.body.twitchChannel, req.body.twitchUsername);
+        } catch (twitchError) {
+          console.error("Warning: Twitch reconnection failed, but settings saved:", twitchError);
+        }
       }
       
       res.json(setting);
@@ -315,6 +320,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating TTS:", error);
       res.status(500).json({ error: "Failed to generate TTS" });
+    }
+  });
+
+  // ElevenLabs usage endpoint (alias for frontend convenience)
+  app.get("/api/elevenlabs/usage", async (req, res) => {
+    try {
+      const elevenLabsService = (req.app as any).elevenLabsService;
+      if (!elevenLabsService) {
+        return res.json({
+          characterCount: 0,
+          characterLimit: 10000,
+          quotaRemaining: 10000,
+        });
+      }
+      const usage = await elevenLabsService.getUsage();
+      // Transform the service response to match frontend expectations
+      res.json({
+        characterCount: usage.characterCount || 0,
+        characterLimit: usage.characterLimit || 10000,
+        quotaRemaining: (usage.characterLimit || 10000) - (usage.characterCount || 0),
+      });
+    } catch (error) {
+      console.error("Error fetching ElevenLabs usage:", error);
+      res.status(500).json({ error: "Failed to fetch usage" });
     }
   });
 
