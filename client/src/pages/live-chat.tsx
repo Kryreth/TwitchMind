@@ -21,10 +21,13 @@ export default function LiveChat() {
     refetchInterval: 2000,
   });
 
-  const { data: status } = useQuery<TwitchStatus>({
+  const { data: status, isLoading: statusLoading } = useQuery<TwitchStatus>({
     queryKey: ["/api/twitch/status"],
     refetchInterval: 3000,
   });
+
+  const isConnected = status?.connected ?? false;
+  const channelName = status?.channel ?? null;
 
   useEffect(() => {
     if (autoScroll && scrollAreaRef.current) {
@@ -51,10 +54,15 @@ export default function LiveChat() {
               Monitor your Twitch chat in real-time
             </p>
           </div>
-          {status?.connected ? (
+          {statusLoading ? (
+            <Badge variant="outline" className="gap-2" data-testid="badge-connection-status">
+              <div className="h-2 w-2 rounded-full bg-muted-foreground animate-pulse" />
+              Checking...
+            </Badge>
+          ) : isConnected && channelName ? (
             <Badge variant="secondary" className="gap-2" data-testid="badge-connection-status">
               <div className="h-2 w-2 rounded-full bg-chart-2 animate-pulse" />
-              Connected to {status.channel}
+              Connected to {channelName}
             </Badge>
           ) : (
             <Badge variant="outline" className="gap-2" data-testid="badge-connection-status">
@@ -85,12 +93,12 @@ export default function LiveChat() {
               </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-2">
-              <p className="text-sm text-muted-foreground">No messages yet</p>
-              {status?.connected ? (
-                <p className="text-xs text-muted-foreground">Monitoring {status.channel} - messages will appear as they come in</p>
+            <div className="flex flex-col items-center justify-center h-full gap-2" data-testid="empty-state-messages">
+              <p className="text-sm text-muted-foreground" data-testid="text-no-messages">No messages yet</p>
+              {isConnected && channelName ? (
+                <p className="text-xs text-muted-foreground" data-testid="text-monitoring-channel">Monitoring {channelName} - messages will appear as they come in</p>
               ) : (
-                <p className="text-xs text-muted-foreground">Log in with Twitch to start monitoring chat</p>
+                <p className="text-xs text-muted-foreground" data-testid="text-login-prompt">Log in with Twitch to start monitoring chat</p>
               )}
             </div>
           ) : (

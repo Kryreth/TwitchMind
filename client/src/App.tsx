@@ -17,7 +17,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
-      <Route path="/chat" component={LiveChat} />
+      <Route path="/live-chat" component={LiveChat} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/ai-controls" component={AiControls} />
       <Route path="/vip-management" component={VIPManagement} />

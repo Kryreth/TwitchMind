@@ -20,7 +20,7 @@ const menuItems = [
   },
   {
     title: "Live Chat",
-    url: "/chat",
+    url: "/live-chat",
     icon: ChatBubbleLeftRightIcon,
   },
   {
