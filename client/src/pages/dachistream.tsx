@@ -73,7 +73,10 @@ export default function DachiStream() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (newSettings: Partial<Settings>) => {
-      return await apiRequest("PATCH", "/api/settings", newSettings);
+      if (!settings || settings.length === 0) {
+        throw new Error("No settings found");
+      }
+      return await apiRequest("PATCH", `/api/settings/${settings[0].id}`, newSettings);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
