@@ -249,6 +249,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/twitch", (req, res) => {
     try {
       const authUrl = twitchOAuthService.getAuthorizationUrl();
+      console.log("=== TWITCH OAUTH DEBUG ===");
+      console.log("Generated Auth URL:", authUrl);
+      console.log("REPLIT_DEV_DOMAIN:", process.env.REPLIT_DEV_DOMAIN);
+      console.log("Expected callback:", process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/twitch/callback`
+        : 'http://localhost:5000/api/auth/twitch/callback');
+      console.log("========================");
       res.redirect(authUrl);
     } catch (error) {
       console.error("Error generating auth URL:", error);
@@ -257,10 +264,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/twitch/callback", async (req, res) => {
+    console.log("=== OAUTH CALLBACK HIT ===");
+    console.log("Query params:", req.query);
+    console.log("========================");
+    
     try {
-      const { code } = req.query;
+      const { code, error } = req.query;
+      
+      if (error) {
+        console.error("OAuth error from Twitch:", error);
+        return res.redirect(`/?auth=error&reason=${error}`);
+      }
       
       if (!code || typeof code !== 'string') {
+        console.error("No authorization code received");
         return res.status(400).json({ error: "Authorization code is required" });
       }
 
