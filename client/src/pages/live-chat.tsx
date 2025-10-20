@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChatMessage } from "@/components/chat-message";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import type { ChatMessageWithAnalysis } from "@shared/schema";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface TwitchStatus {
   connected: boolean;
@@ -12,7 +15,15 @@ interface TwitchStatus {
   messageCount: number;
 }
 
+interface AuthenticatedUser {
+  id: string;
+  twitchUsername: string;
+  twitchDisplayName: string;
+  twitchProfileImageUrl: string | null;
+}
+
 export default function LiveChat() {
+  const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -24,6 +35,46 @@ export default function LiveChat() {
   const { data: status, isLoading: statusLoading } = useQuery<TwitchStatus>({
     queryKey: ["/api/twitch/status"],
     refetchInterval: 3000,
+  });
+
+  const { data: authenticatedUser } = useQuery<AuthenticatedUser>({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      if (!authenticatedUser) {
+        throw new Error("Please log in with Twitch first");
+      }
+      const response = await fetch("/api/twitch/connect", {
+        method: "POST",
+        body: JSON.stringify({
+          channel: authenticatedUser.twitchUsername,
+          username: authenticatedUser.twitchUsername,
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to connect");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Connected!",
+        description: "Successfully connected to Twitch chat",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/twitch/status"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to connect to Twitch",
+        variant: "destructive",
+      });
+    },
   });
 
   const isConnected = status?.connected ?? false;
@@ -93,13 +144,26 @@ export default function LiveChat() {
               </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-2" data-testid="empty-state-messages">
-              <p className="text-sm text-muted-foreground" data-testid="text-no-messages">No messages yet</p>
-              {isConnected && channelName ? (
-                <p className="text-xs text-muted-foreground" data-testid="text-monitoring-channel">Monitoring {channelName} - messages will appear as they come in</p>
-              ) : (
-                <p className="text-xs text-muted-foreground" data-testid="text-login-prompt">Log in with Twitch to start monitoring chat</p>
-              )}
+            <div className="flex flex-col items-center justify-center h-full gap-4" data-testid="empty-state-messages">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground" data-testid="text-no-messages">No messages yet</p>
+                {isConnected && channelName ? (
+                  <p className="text-xs text-muted-foreground" data-testid="text-monitoring-channel">Monitoring {channelName} - messages will appear as they come in</p>
+                ) : authenticatedUser ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground" data-testid="text-login-prompt">Connect to start monitoring your Twitch chat</p>
+                    <Button 
+                      onClick={() => connectMutation.mutate()}
+                      disabled={connectMutation.isPending}
+                      data-testid="button-connect-chat"
+                    >
+                      {connectMutation.isPending ? "Connecting..." : "Connect to Chat"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground" data-testid="text-login-prompt">Log in with Twitch to start monitoring chat</p>
+                )}
+              </div>
             </div>
           ) : (
             <ScrollArea className="h-full" ref={scrollAreaRef} onScrollCapture={handleScroll}>
