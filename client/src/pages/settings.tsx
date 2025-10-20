@@ -29,6 +29,21 @@ export default function SettingsPage() {
   const [dachipoolElevenlabsEnabled, setDachipoolElevenlabsEnabled] = useState(false);
   const [dachipoolElevenlabsVoice, setDachipoolElevenlabsVoice] = useState("Default");
   const [autoShoutoutsEnabled, setAutoShoutoutsEnabled] = useState(true);
+  
+  const [audioMicMode, setAudioMicMode] = useState("muted");
+  const [audioVoiceSelection, setAudioVoiceSelection] = useState("Default");
+  const [audioAiVoiceActive, setAudioAiVoiceActive] = useState(true);
+  const [audioSpeechCleanup, setAudioSpeechCleanup] = useState(true);
+  const [audioFallbackToTextOnly, setAudioFallbackToTextOnly] = useState(true);
+  const [audioCooldownBetweenReplies, setAudioCooldownBetweenReplies] = useState([5]);
+  const [audioMaxVoiceLength, setAudioMaxVoiceLength] = useState([500]);
+  
+  const [topicAllowlist, setTopicAllowlist] = useState<string[]>(["gaming", "anime", "chatting"]);
+  const [topicBlocklist, setTopicBlocklist] = useState<string[]>(["politics", "religion"]);
+  const [useDatabasePersonalization, setUseDatabasePersonalization] = useState(true);
+  const [streamerVoiceOnlyMode, setStreamerVoiceOnlyMode] = useState(false);
+  
+  const [dachiastreamSelectionStrategy, setDachiastreamSelectionStrategy] = useState("most_active");
 
   const { data: settings } = useQuery<Settings[]>({
     queryKey: ["/api/settings"],
@@ -53,6 +68,21 @@ export default function SettingsPage() {
       setDachipoolElevenlabsEnabled(setting.dachipoolElevenlabsEnabled ?? false);
       setDachipoolElevenlabsVoice(setting.dachipoolElevenlabsVoice || "Default");
       setAutoShoutoutsEnabled(setting.autoShoutoutsEnabled ?? true);
+      
+      setAudioMicMode(setting.audioMicMode || "muted");
+      setAudioVoiceSelection(setting.audioVoiceSelection || "Default");
+      setAudioAiVoiceActive(setting.audioAiVoiceActive ?? true);
+      setAudioSpeechCleanup(setting.audioSpeechCleanup ?? true);
+      setAudioFallbackToTextOnly(setting.audioFallbackToTextOnly ?? true);
+      setAudioCooldownBetweenReplies([setting.audioCooldownBetweenReplies || 5]);
+      setAudioMaxVoiceLength([setting.audioMaxVoiceLength || 500]);
+      
+      setTopicAllowlist(setting.topicAllowlist || ["gaming", "anime", "chatting"]);
+      setTopicBlocklist(setting.topicBlocklist || ["politics", "religion"]);
+      setUseDatabasePersonalization(setting.useDatabasePersonalization ?? true);
+      setStreamerVoiceOnlyMode(setting.streamerVoiceOnlyMode ?? false);
+      
+      setDachiastreamSelectionStrategy(setting.dachiastreamSelectionStrategy || "most_active");
     }
   }, [settings]);
 
@@ -94,6 +124,18 @@ export default function SettingsPage() {
       dachipoolElevenlabsEnabled,
       dachipoolElevenlabsVoice,
       autoShoutoutsEnabled,
+      audioMicMode,
+      audioVoiceSelection,
+      audioAiVoiceActive,
+      audioSpeechCleanup,
+      audioFallbackToTextOnly,
+      audioCooldownBetweenReplies: audioCooldownBetweenReplies[0],
+      audioMaxVoiceLength: audioMaxVoiceLength[0],
+      topicAllowlist,
+      topicBlocklist,
+      useDatabasePersonalization,
+      streamerVoiceOnlyMode,
+      dachiastreamSelectionStrategy,
     });
   };
 
@@ -337,6 +379,228 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-audio-settings">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Audio Settings</CardTitle>
+          <CardDescription>Configure voice and audio features</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="ai-voice-active">AI Voice Active</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable AI voice responses
+                  </p>
+                </div>
+                <Switch
+                  id="ai-voice-active"
+                  checked={audioAiVoiceActive}
+                  onCheckedChange={setAudioAiVoiceActive}
+                  data-testid="switch-ai-voice-active"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="voice-selection">Voice Selection</Label>
+                <Select value={audioVoiceSelection} onValueChange={setAudioVoiceSelection}>
+                  <SelectTrigger id="voice-selection" data-testid="select-voice-selection">
+                    <SelectValue placeholder="Select voice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Default">Default</SelectItem>
+                    <SelectItem value="Voice 1">Voice 1</SelectItem>
+                    <SelectItem value="Voice 2">Voice 2</SelectItem>
+                    <SelectItem value="Voice 3">Voice 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mic-mode">Mic Mode</Label>
+                <Select value={audioMicMode} onValueChange={setAudioMicMode}>
+                  <SelectTrigger id="mic-mode" data-testid="select-mic-mode">
+                    <SelectValue placeholder="Select mic mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="muted">Muted</SelectItem>
+                    <SelectItem value="passthrough">Passthrough</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="speech-cleanup">Speech Cleanup</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Clean up spoken text with AI
+                  </p>
+                </div>
+                <Switch
+                  id="speech-cleanup"
+                  checked={audioSpeechCleanup}
+                  onCheckedChange={setAudioSpeechCleanup}
+                  data-testid="switch-speech-cleanup"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="fallback-text">Fallback to Text Only</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Use text when quota exceeded
+                  </p>
+                </div>
+                <Switch
+                  id="fallback-text"
+                  checked={audioFallbackToTextOnly}
+                  onCheckedChange={setAudioFallbackToTextOnly}
+                  data-testid="switch-fallback-text"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Cooldown Between Replies</Label>
+                  <span className="text-sm text-muted-foreground" data-testid="text-cooldown-replies-value">
+                    {audioCooldownBetweenReplies[0]}s
+                  </span>
+                </div>
+                <Slider
+                  value={audioCooldownBetweenReplies}
+                  onValueChange={setAudioCooldownBetweenReplies}
+                  min={1}
+                  max={30}
+                  step={1}
+                  data-testid="slider-cooldown-replies"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum seconds between voice replies
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Max Voice Length</Label>
+                  <span className="text-sm text-muted-foreground" data-testid="text-max-voice-length-value">
+                    {audioMaxVoiceLength[0]}
+                  </span>
+                </div>
+                <Slider
+                  value={audioMaxVoiceLength}
+                  onValueChange={setAudioMaxVoiceLength}
+                  min={100}
+                  max={1000}
+                  step={50}
+                  data-testid="slider-max-voice-length"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum characters for voice synthesis
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-topic-filters">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Topic Filters</CardTitle>
+          <CardDescription>Control what topics the AI can discuss</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="database-personalization">Database Personalization</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Use AI-learned user personalities
+                  </p>
+                </div>
+                <Switch
+                  id="database-personalization"
+                  checked={useDatabasePersonalization}
+                  onCheckedChange={setUseDatabasePersonalization}
+                  data-testid="switch-database-personalization"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="streamer-voice-only">Streamer Voice-Only Mode</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Only respond to streamer messages
+                  </p>
+                </div>
+                <Switch
+                  id="streamer-voice-only"
+                  checked={streamerVoiceOnlyMode}
+                  onCheckedChange={setStreamerVoiceOnlyMode}
+                  data-testid="switch-streamer-voice-only"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label>Allowed Topics</Label>
+                <div className="text-sm text-foreground p-3 bg-muted rounded-md" data-testid="text-allowed-topics">
+                  {topicAllowlist.join(", ")}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Topics the AI can engage with
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Blocked Topics</Label>
+                <div className="text-sm text-foreground p-3 bg-muted rounded-md" data-testid="text-blocked-topics">
+                  {topicBlocklist.join(", ")}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Topics the AI will avoid
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-dachiastream-controls">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">DachiStream Controls</CardTitle>
+          <CardDescription>Configure how the AI selects messages to respond to</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="selection-strategy">Selection Strategy</Label>
+            <Select value={dachiastreamSelectionStrategy} onValueChange={setDachiastreamSelectionStrategy}>
+              <SelectTrigger id="selection-strategy" data-testid="select-selection-strategy">
+                <SelectValue placeholder="Select strategy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="most_active">Most Active</SelectItem>
+                <SelectItem value="random">Random</SelectItem>
+                <SelectItem value="new_chatter">New Chatter</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              How the AI chooses which messages to respond to
+            </p>
+          </div>
+
+          <div className="p-4 bg-muted rounded-md">
+            <p className="text-sm text-foreground">
+              DachiStream operates on a 15-second cycle, analyzing chat activity and selecting messages based on your chosen strategy. The AI will engage naturally while respecting cooldowns and topic filters.
+            </p>
           </div>
         </CardContent>
       </Card>
