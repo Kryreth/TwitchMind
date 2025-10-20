@@ -90,47 +90,55 @@ app.use((req, res, next) => {
       console.error("Failed to start AI learning service:", error);
     });
 
-    // Start DachiStream service with AI response callback
-    dachiStreamService.start(async (message, context) => {
-      try {
-        const allSettings = await storage.getSettings();
-        const settings = allSettings[0];
-        
-        if (settings && settings.dachipoolEnabled) {
-          // Generate AI response with guardrails
-          const aiResponse = await generateDachiStreamResponse(
-            message.message,
-            context,
-            {
-              model: settings.dachipoolOpenaiModel || "gpt-4o-mini",
-              temperature: (settings.dachipoolOpenaiTemp || 7) / 10,
-              maxChars: settings.dachipoolMaxChars || 1000,
-              energy: settings.dachipoolEnergy || "Balanced",
-              personality: settings.aiPersonality || "Casual",
-              topicAllowlist: settings.topicAllowlist as string[] || [],
-              topicBlocklist: settings.topicBlocklist as string[] || [],
-              streamerVoiceOnlyMode: settings.streamerVoiceOnlyMode || false,
-            }
-          );
+    // Start DachiStream service with AI response callback and status updates
+    dachiStreamService.start(
+      async (message, context) => {
+        try {
+          const allSettings = await storage.getSettings();
+          const settings = allSettings[0];
+          
+          if (settings && settings.dachipoolEnabled) {
+            // Generate AI response with guardrails
+            const aiResponse = await generateDachiStreamResponse(
+              message.message,
+              context,
+              {
+                model: settings.dachipoolOpenaiModel || "gpt-4o-mini",
+                temperature: (settings.dachipoolOpenaiTemp || 7) / 10,
+                maxChars: settings.dachipoolMaxChars || 1000,
+                energy: settings.dachipoolEnergy || "Balanced",
+                personality: settings.aiPersonality || "Casual",
+                topicAllowlist: settings.topicAllowlist as string[] || [],
+                topicBlocklist: settings.topicBlocklist as string[] || [],
+                streamerVoiceOnlyMode: settings.streamerVoiceOnlyMode || false,
+              }
+            );
 
-          if (aiResponse) {
-            console.log(`DachiStream AI Response: ${aiResponse}`);
-            
-            // Generate TTS if enabled
-            if (settings.audioAiVoiceActive && settings.dachipoolElevenlabsEnabled) {
-              const ttsResult = await elevenLabsService.generateTTS(aiResponse);
-              if (ttsResult.audio) {
-                console.log("TTS audio generated successfully");
-              } else if (ttsResult.skipped) {
-                console.log(`TTS skipped: ${ttsResult.reason}`);
+            if (aiResponse) {
+              console.log(`DachiStream AI Response: ${aiResponse}`);
+              
+              // Log the AI response
+              dachiStreamService.logAIResponse(aiResponse);
+              
+              // Generate TTS if enabled
+              if (settings.audioAiVoiceActive && settings.dachipoolElevenlabsEnabled) {
+                const ttsResult = await elevenLabsService.generateTTS(aiResponse);
+                if (ttsResult.audio) {
+                  console.log("TTS audio generated successfully");
+                } else if (ttsResult.skipped) {
+                  console.log(`TTS skipped: ${ttsResult.reason}`);
+                }
               }
             }
           }
+        } catch (error) {
+          console.error("Error in DachiStream callback:", error);
         }
-      } catch (error) {
-        console.error("Error in DachiStream callback:", error);
+      },
+      (state) => {
+        // Status updates are handled internally, no need for additional broadcast here
       }
-    });
+    );
 
     // Start ElevenLabs usage polling
     elevenLabsService.startUsagePolling().catch(error => {

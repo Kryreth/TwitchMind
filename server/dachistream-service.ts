@@ -8,6 +8,25 @@ export interface MessageBuffer {
 
 export type SelectionStrategy = "most_active" | "random" | "new_chatter";
 
+export type DachiStreamStatus = "idle" | "collecting" | "processing" | "selecting_message" | "building_context" | "waiting_for_ai" | "disabled" | "paused";
+
+export interface DachiStreamLog {
+  timestamp: Date;
+  type: "info" | "status" | "message" | "selection" | "ai_response" | "error";
+  message: string;
+  data?: any;
+}
+
+export interface DachiStreamState {
+  status: DachiStreamStatus;
+  bufferCount: number;
+  lastCycleTime: Date | null;
+  nextCycleTime: Date | null;
+  selectedMessage: ChatMessage | null;
+  aiResponse: string | null;
+  error: string | null;
+}
+
 export class DachiStreamService {
   private storage: IStorage;
   private messageBuffer: MessageBuffer = {
@@ -17,19 +36,28 @@ export class DachiStreamService {
   private intervalId: NodeJS.Timeout | null = null;
   private isPaused: boolean = false;
   private onMessageSelected?: (message: ChatMessage, context: string) => Promise<void>;
+  
+  private currentStatus: DachiStreamStatus = "idle";
+  private logs: DachiStreamLog[] = [];
+  private maxLogs = 100;
+  private lastCycleTime: Date | null = null;
+  private onStatusChange?: (state: DachiStreamState) => void;
 
   constructor(storage: IStorage) {
     this.storage = storage;
   }
 
-  start(onMessageSelected: (message: ChatMessage, context: string) => Promise<void>) {
+  start(onMessageSelected: (message: ChatMessage, context: string) => Promise<void>, onStatusChange?: (state: DachiStreamState) => void) {
     this.onMessageSelected = onMessageSelected;
+    this.onStatusChange = onStatusChange;
     
     // Run every 15 seconds
     this.intervalId = setInterval(() => {
       this.processBuffer();
     }, 15000);
     
+    this.addLog("info", "DachiStream service started (15-second cycle)");
+    this.updateStatus("collecting");
     console.log("DachiStream service started (15-second cycle)");
   }
 
@@ -38,16 +66,22 @@ export class DachiStreamService {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    this.addLog("info", "DachiStream service stopped");
+    this.updateStatus("idle");
     console.log("DachiStream service stopped");
   }
 
   pause() {
     this.isPaused = true;
+    this.addLog("status", "DachiStream paused");
+    this.updateStatus("paused");
     console.log("DachiStream paused");
   }
 
   resume() {
     this.isPaused = false;
+    this.addLog("status", "DachiStream resumed");
+    this.updateStatus("collecting");
     console.log("DachiStream resumed");
   }
 
@@ -60,43 +94,83 @@ export class DachiStreamService {
       const currentCount = this.messageBuffer.userMessageCounts.get(message.userId) || 0;
       this.messageBuffer.userMessageCounts.set(message.userId, currentCount + 1);
     }
+    
+    this.addLog("message", `Message added to buffer from ${message.username}`, { 
+      message: message.message,
+      bufferSize: this.messageBuffer.messages.length 
+    });
+    this.broadcastState();
   }
 
   private async processBuffer() {
+    this.lastCycleTime = new Date();
+    this.addLog("info", `Processing cycle started - ${this.messageBuffer.messages.length} messages in buffer`);
+    
     // Skip if paused or no messages
-    if (this.isPaused || this.messageBuffer.messages.length === 0) {
+    if (this.isPaused) {
+      this.addLog("status", "Cycle skipped - service is paused");
+      this.updateStatus("paused");
+      return;
+    }
+    
+    if (this.messageBuffer.messages.length === 0) {
+      this.addLog("info", "Cycle skipped - no messages in buffer");
+      this.updateStatus("collecting");
+      this.broadcastState();
       return;
     }
 
     try {
+      this.updateStatus("processing");
+      
       // Get current settings (returns array, take first)
       const allSettings = await this.storage.getSettings();
       const settings = allSettings[0];
       
       if (!settings || !settings.dachipoolEnabled) {
+        this.addLog("status", "DachiPool is disabled - clearing buffer");
+        this.updateStatus("disabled");
         this.clearBuffer();
         return;
       }
 
+      this.updateStatus("selecting_message");
+      this.addLog("info", `Using selection strategy: ${settings.dachiastreamSelectionStrategy}`);
+      
       // Select message based on strategy
       const selectedMessage = await this.selectMessage(
         settings.dachiastreamSelectionStrategy as SelectionStrategy
       );
 
       if (selectedMessage) {
+        this.addLog("selection", `Selected message from ${selectedMessage.username}: "${selectedMessage.message}"`, {
+          username: selectedMessage.username,
+          message: selectedMessage.message,
+          strategy: settings.dachiastreamSelectionStrategy
+        });
+        
+        this.updateStatus("building_context");
         // Build AI context
         const context = await this.buildAIContext(selectedMessage, settings);
+        this.addLog("info", "AI context built successfully");
 
+        this.updateStatus("waiting_for_ai");
         // Trigger AI response callback
         if (this.onMessageSelected) {
           await this.onMessageSelected(selectedMessage, context);
         }
+      } else {
+        this.addLog("info", "No message selected from buffer");
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.addLog("error", `Error processing DachiStream buffer: ${errorMessage}`, { error });
       console.error("Error processing DachiStream buffer:", error);
     } finally {
       // Clear buffer for next cycle
       this.clearBuffer();
+      this.updateStatus("collecting");
+      this.addLog("info", "Buffer cleared - waiting for next cycle");
     }
   }
 
@@ -229,5 +303,69 @@ export class DachiStreamService {
       userCount: this.messageBuffer.userMessageCounts.size,
       isPaused: this.isPaused,
     };
+  }
+  
+  private addLog(type: DachiStreamLog["type"], message: string, data?: any) {
+    const log: DachiStreamLog = {
+      timestamp: new Date(),
+      type,
+      message,
+      data,
+    };
+    
+    this.logs.push(log);
+    
+    // Keep only last maxLogs entries
+    if (this.logs.length > this.maxLogs) {
+      this.logs = this.logs.slice(-this.maxLogs);
+    }
+  }
+  
+  private updateStatus(status: DachiStreamStatus) {
+    this.currentStatus = status;
+    this.broadcastState();
+  }
+  
+  private broadcastState() {
+    if (this.onStatusChange) {
+      const state: DachiStreamState = {
+        status: this.currentStatus,
+        bufferCount: this.messageBuffer.messages.length,
+        lastCycleTime: this.lastCycleTime,
+        nextCycleTime: this.lastCycleTime ? new Date(this.lastCycleTime.getTime() + 15000) : null,
+        selectedMessage: null,
+        aiResponse: null,
+        error: null,
+      };
+      this.onStatusChange(state);
+    }
+  }
+  
+  getState(): DachiStreamState {
+    return {
+      status: this.currentStatus,
+      bufferCount: this.messageBuffer.messages.length,
+      lastCycleTime: this.lastCycleTime,
+      nextCycleTime: this.lastCycleTime ? new Date(this.lastCycleTime.getTime() + 15000) : null,
+      selectedMessage: null,
+      aiResponse: null,
+      error: null,
+    };
+  }
+  
+  getLogs(): DachiStreamLog[] {
+    return [...this.logs];
+  }
+  
+  getBufferMessages(): ChatMessage[] {
+    return [...this.messageBuffer.messages];
+  }
+  
+  logAIResponse(response: string) {
+    this.addLog("ai_response", `AI Response generated: ${response.substring(0, 100)}${response.length > 100 ? '...' : ''}`, {
+      fullResponse: response,
+      length: response.length
+    });
+    this.broadcastState();
   }
 }

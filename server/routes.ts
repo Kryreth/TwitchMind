@@ -567,5 +567,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // DachiStream Monitor API
+  app.get("/api/dachistream/status", (req, res) => {
+    try {
+      const dachiStreamService = (req.app as any).dachiStreamService;
+      if (!dachiStreamService) {
+        return res.status(503).json({ error: "DachiStream service not available" });
+      }
+      
+      const state = dachiStreamService.getState();
+      res.json(state);
+    } catch (error) {
+      console.error("Error fetching DachiStream status:", error);
+      res.status(500).json({ error: "Failed to fetch status" });
+    }
+  });
+
+  app.get("/api/dachistream/logs", (req, res) => {
+    try {
+      const dachiStreamService = (req.app as any).dachiStreamService;
+      if (!dachiStreamService) {
+        return res.status(503).json({ error: "DachiStream service not available" });
+      }
+      
+      const logs = dachiStreamService.getLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching DachiStream logs:", error);
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+
+  app.get("/api/dachistream/buffer", (req, res) => {
+    try {
+      const dachiStreamService = (req.app as any).dachiStreamService;
+      if (!dachiStreamService) {
+        return res.status(503).json({ error: "DachiStream service not available" });
+      }
+      
+      const messages = dachiStreamService.getBufferMessages();
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching DachiStream buffer:", error);
+      res.status(500).json({ error: "Failed to fetch buffer" });
+    }
+  });
+
   return httpServer;
 }
