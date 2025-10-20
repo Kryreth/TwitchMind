@@ -2,9 +2,15 @@ import tmi from "tmi.js";
 import { storage } from "./storage";
 import { analyzeChatMessage, generateAiResponse } from "./openai-service";
 import { WebSocket } from "ws";
+import type { DachiStreamService } from "./dachistream-service";
 
 let twitchClient: tmi.Client | null = null;
 const connectedClients: Set<WebSocket> = new Set();
+let dachiStreamService: DachiStreamService | null = null;
+
+export function setDachiStreamService(service: DachiStreamService) {
+  dachiStreamService = service;
+}
 
 export function addWebSocketClient(ws: WebSocket) {
   connectedClients.add(ws);
@@ -95,6 +101,11 @@ export async function connectToTwitch(channel: string, username: string = "justi
         badges: tags.badges || {},
         emotes: tags.emotes || null,
       });
+
+      // Add message to DachiStream buffer
+      if (dachiStreamService) {
+        dachiStreamService.addMessage(chatMessage);
+      }
 
       const enableAiAnalysis = settings ? settings.enableAiAnalysis : true;
 

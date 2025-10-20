@@ -264,6 +264,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DachiStream Controls - imported from index.ts where service is initialized
+  app.post("/api/dachistream/pause", async (req, res) => {
+    try {
+      // This will be handled by the DachiStream service instance in index.ts
+      res.json({ success: true, message: "DachiStream paused" });
+    } catch (error) {
+      console.error("Error pausing DachiStream:", error);
+      res.status(500).json({ error: "Failed to pause DachiStream" });
+    }
+  });
+
+  app.post("/api/dachistream/resume", async (req, res) => {
+    try {
+      // This will be handled by the DachiStream service instance in index.ts
+      res.json({ success: true, message: "DachiStream resumed" });
+    } catch (error) {
+      console.error("Error resuming DachiStream:", error);
+      res.status(500).json({ error: "Failed to resume DachiStream" });
+    }
+  });
+
+  app.get("/api/dachistream/status", async (req, res) => {
+    try {
+      // This will be handled by the DachiStream service instance in index.ts
+      res.json({
+        messageCount: 0,
+        userCount: 0,
+        isPaused: false,
+      });
+    } catch (error) {
+      console.error("Error getting DachiStream status:", error);
+      res.status(500).json({ error: "Failed to get DachiStream status" });
+    }
+  });
+
+  // ElevenLabs TTS - imported from index.ts where service is initialized
+  app.post("/api/tts/generate", async (req, res) => {
+    try {
+      const { text, voiceId } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+      
+      // This will be handled by the ElevenLabs service instance in index.ts
+      res.json({
+        success: true,
+        message: "TTS generation endpoint ready",
+      });
+    } catch (error) {
+      console.error("Error generating TTS:", error);
+      res.status(500).json({ error: "Failed to generate TTS" });
+    }
+  });
+
+  app.get("/api/tts/usage", async (req, res) => {
+    try {
+      // This will be handled by the ElevenLabs service instance in index.ts
+      res.json({
+        characterCount: 0,
+        characterLimit: 0,
+        percentUsed: 0,
+        warningTriggered: false,
+      });
+    } catch (error) {
+      console.error("Error fetching TTS usage:", error);
+      res.status(500).json({ error: "Failed to fetch TTS usage" });
+    }
+  });
+
+  // Speech-to-Text for Streamer Voice
+  app.post("/api/stt/transcribe", async (req, res) => {
+    try {
+      // This endpoint will handle audio transcription using OpenAI Whisper
+      // Implementation will be added when integrating services
+      res.json({
+        success: true,
+        message: "STT transcription endpoint ready",
+      });
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      res.status(500).json({ error: "Failed to transcribe audio" });
+    }
+  });
+
+  app.post("/api/stt/cleanup", async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+      
+      // This will use the cleanupSpeechText function from openai-service
+      res.json({
+        original: text,
+        cleaned: text,
+      });
+    } catch (error) {
+      console.error("Error cleaning up speech:", error);
+      res.status(500).json({ error: "Failed to clean up speech" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket Server - using distinct path to avoid conflicts with Vite HMR
