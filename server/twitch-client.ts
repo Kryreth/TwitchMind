@@ -39,6 +39,12 @@ export async function connectToTwitch(channel: string, username: string = "justi
 
   // Check if we have an authenticated user with OAuth token
   const authenticatedUser = await storage.getAuthenticatedUser();
+  console.log(`[DEBUG] getAuthenticatedUser result:`, authenticatedUser ? {
+    username: authenticatedUser.twitchUsername,
+    hasAccessToken: !!authenticatedUser.accessToken,
+    tokenLength: authenticatedUser.accessToken?.length || 0
+  } : 'null');
+  
   let identity: { username: string; password?: string } | undefined;
 
   if (authenticatedUser && authenticatedUser.accessToken) {
