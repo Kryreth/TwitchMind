@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import LiveChat from "@/pages/live-chat";
 import Analytics from "@/pages/analytics";
 import AiControls from "@/pages/ai-controls";
+import DachiStream from "@/pages/dachistream";
 import SettingsPage from "@/pages/settings";
 import VIPManagement from "@/pages/vip-management";
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/live-chat" component={LiveChat} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/ai-controls" component={AiControls} />
+      <Route path="/dachistream" component={DachiStream} />
       <Route path="/vip-management" component={VIPManagement} />
       <Route path="/settings" component={SettingsPage} />
     </Switch>
