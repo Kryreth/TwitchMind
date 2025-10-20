@@ -367,6 +367,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/twitch/status", async (req, res) => {
+    try {
+      const client = getTwitchClient();
+      const messageCount = await storage.getChatMessages(1);
+      
+      if (!client) {
+        return res.json({
+          connected: false,
+          channel: null,
+          messageCount: messageCount.length,
+        });
+      }
+
+      const channels = client.getChannels();
+      res.json({
+        connected: client.readyState() === "OPEN",
+        channel: channels.length > 0 ? channels[0].replace('#', '') : null,
+        messageCount: messageCount.length,
+      });
+    } catch (error) {
+      console.error("Error getting Twitch status:", error);
+      res.status(500).json({ error: "Failed to get Twitch status" });
+    }
+  });
+
   // DachiStream Controls - imported from index.ts where service is initialized
   app.post("/api/dachistream/pause", async (req, res) => {
     try {

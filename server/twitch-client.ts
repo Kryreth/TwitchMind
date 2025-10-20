@@ -30,7 +30,11 @@ function broadcastToClients(event: string, data: any) {
 
 export async function connectToTwitch(channel: string, username: string = "justinfan12345") {
   if (twitchClient) {
-    await twitchClient.disconnect();
+    try {
+      await twitchClient.disconnect();
+    } catch (error) {
+      console.log("Note: Previous Twitch client was already disconnected");
+    }
   }
 
   twitchClient = new tmi.Client({
