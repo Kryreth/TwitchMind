@@ -39,13 +39,6 @@ export default function SettingsPage() {
   const [audioFallbackToTextOnly, setAudioFallbackToTextOnly] = useState(true);
   const [audioCooldownBetweenReplies, setAudioCooldownBetweenReplies] = useState([5]);
   const [audioMaxVoiceLength, setAudioMaxVoiceLength] = useState([500]);
-  
-  const [topicAllowlist, setTopicAllowlist] = useState<string[]>(["gaming", "anime", "chatting"]);
-  const [topicBlocklist, setTopicBlocklist] = useState<string[]>(["politics", "religion"]);
-  const [useDatabasePersonalization, setUseDatabasePersonalization] = useState(true);
-  const [streamerVoiceOnlyMode, setStreamerVoiceOnlyMode] = useState(false);
-  
-  const [dachiastreamSelectionStrategy, setDachiastreamSelectionStrategy] = useState("most_active");
 
   const { data: settings } = useQuery<Settings[]>({
     queryKey: ["/api/settings"],
@@ -101,13 +94,6 @@ export default function SettingsPage() {
       setAudioFallbackToTextOnly(setting.audioFallbackToTextOnly ?? true);
       setAudioCooldownBetweenReplies([setting.audioCooldownBetweenReplies || 5]);
       setAudioMaxVoiceLength([setting.audioMaxVoiceLength || 500]);
-      
-      setTopicAllowlist(setting.topicAllowlist || ["gaming", "anime", "chatting"]);
-      setTopicBlocklist(setting.topicBlocklist || ["politics", "religion"]);
-      setUseDatabasePersonalization(setting.useDatabasePersonalization ?? true);
-      setStreamerVoiceOnlyMode(setting.streamerVoiceOnlyMode ?? false);
-      
-      setDachiastreamSelectionStrategy(setting.dachiastreamSelectionStrategy || "most_active");
     }
   }, [settings]);
 
@@ -156,11 +142,6 @@ export default function SettingsPage() {
       audioFallbackToTextOnly,
       audioCooldownBetweenReplies: audioCooldownBetweenReplies[0],
       audioMaxVoiceLength: audioMaxVoiceLength[0],
-      topicAllowlist,
-      topicBlocklist,
-      useDatabasePersonalization,
-      streamerVoiceOnlyMode,
-      dachiastreamSelectionStrategy,
     });
   };
 
@@ -572,101 +553,6 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card data-testid="card-topic-filters">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Topic Filters</CardTitle>
-          <CardDescription>Control what topics the AI can discuss</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="database-personalization">Database Personalization</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Use AI-learned user personalities
-                  </p>
-                </div>
-                <Switch
-                  id="database-personalization"
-                  checked={useDatabasePersonalization}
-                  onCheckedChange={setUseDatabasePersonalization}
-                  data-testid="switch-database-personalization"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="streamer-voice-only">Streamer Voice-Only Mode</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Only respond to streamer messages
-                  </p>
-                </div>
-                <Switch
-                  id="streamer-voice-only"
-                  checked={streamerVoiceOnlyMode}
-                  onCheckedChange={setStreamerVoiceOnlyMode}
-                  data-testid="switch-streamer-voice-only"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label>Allowed Topics</Label>
-                <div className="text-sm text-foreground p-3 bg-muted rounded-md" data-testid="text-allowed-topics">
-                  {topicAllowlist.join(", ")}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Topics the AI can engage with
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Blocked Topics</Label>
-                <div className="text-sm text-foreground p-3 bg-muted rounded-md" data-testid="text-blocked-topics">
-                  {topicBlocklist.join(", ")}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Topics the AI will avoid
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card data-testid="card-dachiastream-controls">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">DachiStream Controls</CardTitle>
-          <CardDescription>Configure how the AI selects messages to respond to</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="selection-strategy">Selection Strategy</Label>
-            <Select value={dachiastreamSelectionStrategy} onValueChange={setDachiastreamSelectionStrategy}>
-              <SelectTrigger id="selection-strategy" data-testid="select-selection-strategy">
-                <SelectValue placeholder="Select strategy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="most_active">Most Active</SelectItem>
-                <SelectItem value="random">Random</SelectItem>
-                <SelectItem value="new_chatter">New Chatter</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              How the AI chooses which messages to respond to
-            </p>
-          </div>
-
-          <div className="p-4 bg-muted rounded-md">
-            <p className="text-sm text-foreground">
-              DachiStream operates on a 15-second cycle, analyzing chat activity and selecting messages based on your chosen strategy. The AI will engage naturally while respecting cooldowns and topic filters.
-            </p>
           </div>
         </CardContent>
       </Card>
