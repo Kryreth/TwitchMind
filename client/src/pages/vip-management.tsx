@@ -23,11 +23,7 @@ export default function VIPManagement() {
 
   const toggleVipMutation = useMutation({
     mutationFn: async ({ userId, isVip }: { userId: string; isVip: boolean }) => {
-      return await apiRequest(`/api/users/${userId}/vip`, {
-        method: "PATCH",
-        body: JSON.stringify({ isVip }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("PATCH", `/api/users/${userId}/vip`, { isVip });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users/vips"] });
@@ -41,33 +37,25 @@ export default function VIPManagement() {
 
   const addVipMutation = useMutation({
     mutationFn: async (username: string) => {
-      const users = await apiRequest<UserProfile[]>("/api/users");
+      const response = await fetch("/api/users");
+      const users: UserProfile[] = await response.json();
       const existingUser = users.find(u => u.username.toLowerCase() === username.toLowerCase());
       
       if (existingUser) {
-        return await apiRequest(`/api/users/${existingUser.userId}/vip`, {
-          method: "PATCH",
-          body: JSON.stringify({ isVip: true }),
-          headers: { "Content-Type": "application/json" },
-        });
+        const res = await apiRequest("PATCH", `/api/users/${existingUser.userId}/vip`, { isVip: true });
+        return await res.json();
       } else {
-        const newUser = await apiRequest("/api/users", {
-          method: "POST",
-          body: JSON.stringify({
-            userId: `manual_${username}_${Date.now()}`,
-            username,
-            isVip: true,
-            isMod: false,
-            isSubscriber: false,
-            wasAnonymous: false,
-          }),
-          headers: { "Content-Type": "application/json" },
+        const userRes = await apiRequest("POST", "/api/users", {
+          userId: `manual_${username}_${Date.now()}`,
+          username,
+          isVip: true,
+          isMod: false,
+          isSubscriber: false,
+          wasAnonymous: false,
         });
-        return await apiRequest(`/api/users/${newUser.userId}/vip`, {
-          method: "PATCH",
-          body: JSON.stringify({ isVip: true }),
-          headers: { "Content-Type": "application/json" },
-        });
+        const newUser: UserProfile = await userRes.json();
+        const vipRes = await apiRequest("PATCH", `/api/users/${newUser.userId}/vip`, { isVip: true });
+        return await vipRes.json();
       }
     },
     onSuccess: () => {
