@@ -1,0 +1,168 @@
+🔮 StreamDachi AI Expansion – Full Feature Specification (Detailed)
+
+This feature set extends the existing StreamDachi Replit project with streamer voice interaction, real-time AI moderation controls, usage feedback, and the DachiStream response cycle.
+
+1. 🧠 DachiStream Timing and Response Pool
+🔄 15-Second Rolling Collection Window
+
+A background scheduler will trigger every 15 seconds.
+
+During each interval, all chat messages are collected into a temporary in-memory chat buffer.
+
+Each message includes: userId, message, eventType, and timestamp.
+
+🎯 Message Selection Logic
+
+At the end of the interval:
+
+One message is selected from the pool. Selection strategies (toggleable):
+
+Most active user
+
+Random selection
+
+New chatter preference
+
+This message is marked as the "primary" prompt input.
+
+🧠 AI Contextual Response
+
+The system looks up the user’s personality profile in user_insights (if available).
+
+Their recent chat_messages history (last 5–10) is used to enrich context.
+
+The selected message + profile context are passed to OpenAI with this structure:
+
+{
+  "targetUser": "username",
+  "targetMessage": "their chat message",
+  "personality": "playful, high-energy",
+  "recentStreamContext": ["otherUser1: message", "otherUser2: message", "..."]
+}
+
+🗣️ AI Response Handling
+
+OpenAI returns a structured reply (text, style, tags) per DachiPool format.
+
+If ElevenLabs is active, the response is spoken aloud.
+
+This completes the 15-second cycle and resets the chat buffer.
+
+2. 🧾 OpenAI Guardrails and Topic Control
+🔐 Prompt Guardrails
+
+Every OpenAI prompt will prepend a strict system message:
+
+You are the VTuber's voice. Stay in-character and streamer-friendly. Do not mention AI, OpenAI, or system internals. Avoid profanity, politics, and sensitive topics. No impersonation of chatters. Avoid overusing emojis or memes. Stay under {maxChars} characters.
+
+🎛️ Topic Filters (User Customizable)
+
+Added to the UI:
+
+✅ Allowlist Topics (e.g. “gaming”, “anime”, “chatting”)
+
+🚫 Blocklist Topics (e.g. “politics”, “religion”, “injuries”)
+
+🧠 Toggle: Use Database for AI Personalization
+
+🎭 Toggle: Streamer Voice-Only Mode (disables automatic AI responses)
+
+These values are injected into the prompt dynamically.
+
+3. 🗣️ Streamer Voice Integration and Cleanup
+🎤 Live Mic-to-AI Flow
+
+When the streamer speaks:
+
+Audio is transcribed to text using whisper.cpp or a streaming STT service.
+
+Transcription is passed to OpenAI with instruction:
+
+"Clean this spoken text. Remove stutters, false starts, and filler. Return polished stream-friendly version under 1000 characters."
+
+Final polished text is:
+
+🔊 Spoken back via ElevenLabs
+
+💬 Optionally logged as a streamer message in chat history
+
+⏸️ DachiStream Pause Behavior
+
+When streamer voice is detected:
+
+DachiStream cycle is paused until transcription + response completes
+
+Chat buffer continues collecting, but no responses are generated
+
+4. 📊 Real-Time ElevenLabs Usage Dashboard
+⚙️ Backend Polling
+
+Every 60 seconds, ElevenLabs API is queried for usage stats:
+
+Monthly character quota
+
+Characters used
+
+Characters remaining
+
+🖥️ Dashboard Integration
+
+Added to Settings or AI Controls page:
+
+Progress bar showing % used
+
+Numerical counters (e.g. “Used: 9,200 / 10,000”)
+
+🔔 Warning banner if usage > 85%
+
+🔁 Realtime Updates
+
+WebSocket pushes usage stats every 60 seconds
+
+Display updates without page reload
+
+5. 🎚️ Audio Control Settings Panel
+
+New tab or sub-panel in Settings → Audio Controls:
+
+🎛️ Controls:
+Setting	Type	Description
+Streamer Mic Mode	Toggle	Mute mic / Allow passthrough
+ElevenLabs Voice	Dropdown	Select from available ElevenLabs voices
+AI Voice Active	Toggle	Enable/disable AI speaking responses
+Speech Cleanup	Toggle	Enable Whisper + GPT cleanup
+Fallback to Text Only	Toggle	If ElevenLabs fails, use chat only
+Cooldown Between AI Replies	Slider (s)	Prevent voice spam from AI
+Max Voice Length	Slider (chars)	Limit length of spoken output
+
+All changes will be saved with a unified "Apply Settings" button.
+
+✅ Summary of What Will Be Delivered in Final Build
+
+New Pages/Sections:
+
+AI Controls: with DachiStream, cooldown, topic settings
+
+Audio Settings: full control panel
+
+ElevenLabs Usage: dashboard widget
+
+New Backend Features:
+
+DachiStream scheduler & buffer manager
+
+STT + GPT cleanup flow
+
+ElevenLabs usage polling
+
+Prompt injection with system guardrails
+
+Topic allow/block system
+
+Automatic cooldown tracking for voice
+
+Database Changes:
+
+Optional streamer_speaks table (history of your own polished messages)
+
+Let me know if you'd like this exported as a .md, .txt, or zipped doc — or if you're ready for me to start building it into the current Replit project base.
