@@ -1,8 +1,8 @@
-# Twitch AI Dashboard
+# StreamDachi - Twitch AI Integration Platform
 
 ## Overview
 
-A real-time Twitch chat monitoring and analytics dashboard powered by OpenAI's GPT-5 for sentiment analysis, toxicity detection, and automated chat responses. The application provides streamers with AI-driven insights into their chat activity, moderation tools, and customizable AI commands for audience engagement.
+StreamDachi is a comprehensive Twitch integration app with AI-powered features including real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, mods, subscribers), automatic shoutout system for VIPs with 24-hour cooldown, full per-stream chat logging, AI user learning engine for personalized responses, and configurable DachiPool settings with ElevenLabs TTS integration. Features a dark-themed dashboard with Twitch aesthetic (purple accents HSL 265 100% 70%).
 
 ## User Preferences
 
@@ -26,7 +26,7 @@ Preferred communication style: Simple, everyday language.
 
 **Routing**: Wouter for client-side routing
 - Lightweight alternative to React Router
-- Five main pages: Dashboard, Live Chat, Analytics, AI Controls, Settings
+- Six main pages: Dashboard, Live Chat, Analytics, AI Controls, VIP Management, Settings
 
 **Styling**: Tailwind CSS with custom design tokens
 - CSS variables for theming
@@ -48,7 +48,10 @@ Preferred communication style: Simple, everyday language.
 **Database Layer**: 
 - ORM: Drizzle ORM with Neon PostgreSQL serverless driver
 - Schema-first approach with TypeScript type safety
-- Four main tables: chat_messages, ai_analysis, ai_commands, settings
+- Six main tables: user_profiles, user_insights, chat_messages, ai_analysis, ai_commands, settings
+- **user_profiles**: Tracks all chat users with VIP/mod/subscriber status, shoutout timestamps, channel points
+- **user_insights**: AI-generated personality summaries and behavior analysis per user
+- **chat_messages**: Enhanced with userId, streamId (per-stream logging), eventType (chat/redeem/raid/sub)
 
 **Real-time Communication**:
 - WebSocket server using `ws` library
@@ -59,13 +62,18 @@ Preferred communication style: Simple, everyday language.
 - `/api/messages` - Chat message retrieval and creation
 - `/api/analyses` - AI analysis results
 - `/api/commands` - Custom AI command management
-- `/api/settings` - Application configuration
+- `/api/settings` - Application configuration (now includes DachiPool settings)
+- `/api/users` - User profile management (GET all, POST create/update, GET by userId)
+- `/api/users/vips` - Fetch all VIP users
+- `/api/users/:userId/vip` - Toggle VIP status (PATCH with isVip boolean)
+- `/api/insights` - AI-generated user insights (GET all, GET by userId, POST save)
 - `/ws` - WebSocket endpoint for real-time updates
 
 **Service Layer**:
-- `storage.ts`: Database abstraction layer implementing IStorage interface
+- `storage.ts`: Database abstraction layer implementing IStorage interface with user profile and insights methods
 - `openai-service.ts`: AI analysis and response generation
-- `twitch-client.ts`: Twitch chat connection and message handling
+- `twitch-client.ts`: Enhanced Twitch chat connection with role tracking (VIP/mod badges) and auto-shoutout system
+- `ai-learning-service.ts`: Periodic AI user learning engine (runs every 10 minutes)
 
 ### External Dependencies
 
@@ -112,6 +120,53 @@ Preferred communication style: Simple, everyday language.
 
 4. **AI Analysis Pipeline**: Messages are stored first, then analyzed asynchronously by OpenAI. Analysis results are stored separately and joined with messages for display, allowing for reanalysis without message duplication.
 
-5. **Dark Mode First**: Design system prioritized dark theme as primary use case, recognizing that streamers often use dashboards during long streaming sessions.
+5. **AI Learning Engine**: Runs every 10 minutes using gpt-4o-mini for cost efficiency. Generates personality summaries by analyzing recent chat history per user. Summaries stored in user_insights table for personalized AI responses.
 
-6. **Component Co-location**: UI components are organized with related logic (e.g., `ChatMessage` component includes sentiment visualization logic), reducing coupling between features.
+6. **Auto-Shoutout System**: VIP users receive automatic greetings on first interaction per stream. 24-hour cooldown tracked via shoutoutLastGiven timestamp. Configurable via autoShoutoutsEnabled setting.
+
+7. **Per-Stream Chat Logging**: Each streaming session assigned unique streamId. Enables historical analysis, highlight extraction, and stream-specific insights.
+
+8. **DachiPool Configuration**: Comprehensive AI behavior customization including energy levels (Low/Balanced/High), modes (Auto/Manual), OpenAI model selection, temperature control, ElevenLabs TTS integration, and shoutout cooldown adjustment.
+
+9. **Dark Mode First**: Design system prioritized dark theme as primary use case, recognizing that streamers often use dashboards during long streaming sessions.
+
+10. **Component Co-location**: UI components are organized with related logic (e.g., `ChatMessage` component includes sentiment visualization logic), reducing coupling between features.
+
+## New Features Implemented
+
+### VIP Management System
+- **VIP Management Page** (`/vip-management`): Add/remove VIP users, view shoutout cooldown status
+- **Auto-Shoutouts**: Configurable 24-hour cooldown per VIP user
+- **Role Tracking**: Automatic detection of VIP/mod status from Twitch chat badges
+- **Manual VIP Addition**: Add users to VIP list even if not currently in chat
+
+### AI Learning Engine
+- **Periodic Analysis**: Runs every 10 minutes analyzing user chat patterns
+- **Personality Summaries**: AI-generated behavior summaries per user
+- **Cost Optimization**: Uses gpt-4o-mini model for efficient learning
+- **Personalized Responses**: Future AI responses can reference user insights for contextual engagement
+
+### DachiPool Configuration (Settings Page)
+- **Enable/Disable DachiPool**: Master toggle for enhanced AI features
+- **Energy Levels**: Low/Balanced/High settings for AI response intensity
+- **Mode Selection**: Auto (AI decides) or Manual (user-controlled)
+- **Max Characters**: Configurable AI response length (100-2000 chars)
+- **Shoutout Cooldown**: Adjustable from 1-168 hours (1 week)
+- **OpenAI Settings**: Model selection and temperature control (0.0-1.0)
+- **ElevenLabs TTS**: Toggle for text-to-speech integration with voice selection
+- **Auto Shoutouts**: Master toggle for VIP greeting system
+
+### Enhanced Chat Features
+- **Stream ID Tracking**: Each streaming session gets unique identifier
+- **Event Types**: Support for chat, redeems, raids, subs, and more
+- **User Profiles**: Complete tracking of user interactions across streams
+- **Channel Points**: Foundation for future point-based interactions (requires OAuth)
+
+## Technical Implementation Notes
+
+- **Twitch Role Detection**: VIP and moderator status detected from chat badges. Subscriber status and channel points require Twitch OAuth (optional future enhancement).
+- **AI Model Choice**: gpt-4o-mini selected for learning service to balance cost and quality. Configurable via DachiPool settings.
+- **Database Expansion**: New tables added with proper foreign key relationships (userId references across tables).
+- **API Design**: RESTful endpoints following consistent patterns (GET for retrieval, POST for creation, PATCH for updates).
+- **Frontend State Management**: TanStack Query cache invalidation ensures UI stays in sync after mutations.
+- **Error Handling**: Comprehensive error messages and toast notifications for user feedback.
