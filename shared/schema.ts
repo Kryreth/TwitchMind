@@ -75,6 +75,21 @@ export const streamerSpeaks = pgTable("streamer_speaks", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 
+// Authenticated Users Table - OAuth Login
+export const authenticatedUsers = pgTable("authenticated_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  twitchUserId: text("twitch_user_id").notNull().unique(),
+  twitchUsername: text("twitch_username").notNull(),
+  twitchDisplayName: text("twitch_display_name").notNull(),
+  twitchProfileImageUrl: text("twitch_profile_image_url"),
+  twitchEmail: text("twitch_email"),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Settings Table - Enhanced with DachiPool configuration
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -176,6 +191,12 @@ export const insertStreamerSpeaksSchema = createInsertSchema(streamerSpeaks).omi
   timestamp: true,
 });
 
+export const insertAuthenticatedUserSchema = createInsertSchema(authenticatedUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
@@ -197,6 +218,9 @@ export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 
 export type StreamerSpeaks = typeof streamerSpeaks.$inferSelect;
 export type InsertStreamerSpeaks = z.infer<typeof insertStreamerSpeaksSchema>;
+
+export type AuthenticatedUser = typeof authenticatedUsers.$inferSelect;
+export type InsertAuthenticatedUser = z.infer<typeof insertAuthenticatedUserSchema>;
 
 // Extended types for frontend
 export type ChatMessageWithAnalysis = ChatMessage & {

@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Settings, InsertSettings } from "@shared/schema";
+import type { Settings, InsertSettings, AuthenticatedUser } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { LogOut } from "lucide-react";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -47,6 +49,29 @@ export default function SettingsPage() {
 
   const { data: settings } = useQuery<Settings[]>({
     queryKey: ["/api/settings"],
+  });
+
+  const { data: authenticatedUser } = useQuery<AuthenticatedUser>({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/logout", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   useEffect(() => {
@@ -155,32 +180,93 @@ export default function SettingsPage() {
             <CardDescription>Connect to your Twitch channel</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="channel">Channel Name</Label>
-              <Input
-                id="channel"
-                value={twitchChannel}
-                onChange={(e) => setTwitchChannel(e.target.value)}
-                placeholder="Enter channel name"
-                data-testid="input-channel"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                The Twitch channel to monitor
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="username">Bot Username</Label>
-              <Input
-                id="username"
-                value={twitchUsername}
-                onChange={(e) => setTwitchUsername(e.target.value)}
-                placeholder="Enter bot username"
-                data-testid="input-username"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Username for the chat bot (can be your own)
-              </p>
-            </div>
+            {authenticatedUser ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-md">
+                  <Avatar data-testid="avatar-user">
+                    <AvatarImage src={authenticatedUser.twitchProfileImageUrl || undefined} />
+                    <AvatarFallback>{authenticatedUser.twitchDisplayName[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground" data-testid="text-display-name">
+                      {authenticatedUser.twitchDisplayName}
+                    </p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-username">
+                      @{authenticatedUser.twitchUsername}
+                    </p>
+                    {authenticatedUser.twitchEmail && (
+                      <p className="text-xs text-muted-foreground" data-testid="text-email">
+                        {authenticatedUser.twitchEmail}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Connected via Twitch OAuth. Your channel is automatically configured.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-4">
+                  <Button
+                    onClick={() => window.location.href = "/api/auth/twitch"}
+                    data-testid="button-login-twitch"
+                    className="w-full"
+                  >
+                    Login with Twitch
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Recommended: Login with Twitch for automatic configuration
+                  </p>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or configure manually
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="channel">Channel Name</Label>
+                  <Input
+                    id="channel"
+                    value={twitchChannel}
+                    onChange={(e) => setTwitchChannel(e.target.value)}
+                    placeholder="Enter channel name"
+                    data-testid="input-channel"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The Twitch channel to monitor
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="username">Bot Username</Label>
+                  <Input
+                    id="username"
+                    value={twitchUsername}
+                    onChange={(e) => setTwitchUsername(e.target.value)}
+                    placeholder="Enter bot username"
+                    data-testid="input-username"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Username for the chat bot (can be your own)
+                  </p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

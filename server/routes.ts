@@ -12,6 +12,7 @@ import {
   insertUserInsightSchema,
 } from "@shared/schema";
 import { connectToTwitch, disconnectFromTwitch, addWebSocketClient } from "./twitch-client";
+import { twitchOAuthService } from "./twitch-oauth-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Chat Messages
@@ -244,6 +245,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Twitch OAuth Routes
+  app.get("/api/auth/twitch", (req, res) => {
+    try {
+      const authUrl = twitchOAuthService.getAuthorizationUrl();
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Error generating auth URL:", error);
+      res.status(500).json({ error: "Failed to generate authorization URL" });
+    }
+  });
+
+  app.get("/api/auth/twitch/callback", async (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ error: "Authorization code is required" });
+      }
+
+      // Exchange code for token
+      const tokenResponse = await twitchOAuthService.exchangeCodeForToken(code);
+      
+      // Get user info
+      const twitchUser = await twitchOAuthService.getTwitchUser(tokenResponse.access_token);
+      
+      // Calculate token expiration
+      const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
+      
+      // Save authenticated user
+      await storage.saveAuthenticatedUser({
+        twitchUserId: twitchUser.id,
+        twitchUsername: twitchUser.login,
+        twitchDisplayName: twitchUser.display_name,
+        twitchProfileImageUrl: twitchUser.profile_image_url,
+        twitchEmail: twitchUser.email,
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        tokenExpiresAt: expiresAt,
+      });
+
+      // Auto-connect to Twitch with OAuth token
+      try {
+        await connectToTwitch(twitchUser.login, twitchUser.login);
+        console.log(`Auto-connected to Twitch channel: ${twitchUser.login}`);
+      } catch (error) {
+        console.error("Failed to auto-connect after OAuth:", error);
+      }
+
+      // Redirect to dashboard
+      res.redirect("/?auth=success");
+    } catch (error) {
+      console.error("Error in OAuth callback:", error);
+      res.redirect("/?auth=error");
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      await storage.deleteAuthenticatedUser();
+      disconnectFromTwitch();
+      res.json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Error logging out:", error);
+      res.status(500).json({ error: "Failed to logout" });
+    }
+  });
+
+  app.get("/api/auth/user", async (req, res) => {
+    try {
+      const user = await storage.getAuthenticatedUser();
+      if (!user) {
+        return res.status(404).json({ error: "No authenticated user" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching authenticated user:", error);
+      res.status(500).json({ error: "Failed to fetch authenticated user" });
+    }
+  });
+
   // Twitch Connection Control
   app.post("/api/twitch/connect", async (req, res) => {
     try {
@@ -418,15 +499,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Auto-connect to Twitch if settings exist
-  const existingSettings = await storage.getSettings();
-  if (existingSettings.length > 0 && existingSettings[0].twitchChannel) {
-    const setting = existingSettings[0];
+  // Auto-connect to Twitch if authenticated user exists (OAuth takes priority)
+  const authenticatedUser = await storage.getAuthenticatedUser();
+  if (authenticatedUser && authenticatedUser.twitchUsername) {
     try {
-      await connectToTwitch(setting.twitchChannel, setting.twitchUsername || undefined);
-      console.log(`Auto-connected to Twitch channel: ${setting.twitchChannel}`);
+      await connectToTwitch(authenticatedUser.twitchUsername, authenticatedUser.twitchUsername);
+      console.log(`Auto-connected to Twitch via OAuth: ${authenticatedUser.twitchUsername}`);
     } catch (error) {
       console.error("Failed to auto-connect to Twitch:", error);
+    }
+  } else {
+    // Fallback to manual settings if no OAuth user
+    const existingSettings = await storage.getSettings();
+    if (existingSettings.length > 0 && existingSettings[0].twitchChannel) {
+      const setting = existingSettings[0];
+      try {
+        await connectToTwitch(setting.twitchChannel, setting.twitchUsername || undefined);
+        console.log(`Auto-connected to Twitch channel: ${setting.twitchChannel}`);
+      } catch (error) {
+        console.error("Failed to auto-connect to Twitch:", error);
+      }
     }
   }
 

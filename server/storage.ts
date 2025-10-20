@@ -6,6 +6,7 @@ import {
   settings,
   userProfiles,
   userInsights,
+  authenticatedUsers,
   type ChatMessage,
   type InsertChatMessage,
   type AiAnalysis,
@@ -20,6 +21,8 @@ import {
   type UserInsight,
   type InsertUserInsight,
   type UserProfileWithInsight,
+  type AuthenticatedUser,
+  type InsertAuthenticatedUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -64,6 +67,11 @@ export interface IStorage {
   getSettingsById(id: string): Promise<Settings | undefined>;
   createSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(id: string, settings: Partial<InsertSettings>): Promise<Settings>;
+  
+  // Authenticated Users
+  getAuthenticatedUser(): Promise<AuthenticatedUser | undefined>;
+  saveAuthenticatedUser(user: InsertAuthenticatedUser): Promise<AuthenticatedUser>;
+  deleteAuthenticatedUser(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -312,6 +320,41 @@ export class DatabaseStorage implements IStorage {
       .where(eq(settings.id, id))
       .returning();
     return setting;
+  }
+
+  // Authenticated Users
+  async getAuthenticatedUser(): Promise<AuthenticatedUser | undefined> {
+    const [user] = await db
+      .select()
+      .from(authenticatedUsers)
+      .limit(1);
+    return user || undefined;
+  }
+
+  async saveAuthenticatedUser(insertUser: InsertAuthenticatedUser): Promise<AuthenticatedUser> {
+    const existing = await this.getAuthenticatedUser();
+    
+    if (existing) {
+      const [updated] = await db
+        .update(authenticatedUsers)
+        .set({ 
+          ...insertUser, 
+          updatedAt: new Date() 
+        })
+        .where(eq(authenticatedUsers.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(authenticatedUsers)
+        .values(insertUser)
+        .returning();
+      return created;
+    }
+  }
+
+  async deleteAuthenticatedUser(): Promise<void> {
+    await db.delete(authenticatedUsers);
   }
 }
 
