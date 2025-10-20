@@ -98,7 +98,9 @@ export async function connectToTwitch(channel: string, username: string = "justi
         message,
         channel,
         userColor,
-        badges: tags.badges || {},
+        badges: tags.badges ? Object.fromEntries(
+          Object.entries(tags.badges).filter(([_, v]) => v !== undefined)
+        ) as Record<string, string> : {},
         emotes: tags.emotes || null,
       });
 

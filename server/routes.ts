@@ -511,13 +511,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } else {
     // Fallback to manual settings if no OAuth user
     const existingSettings = await storage.getSettings();
-    if (existingSettings.length > 0 && existingSettings[0].twitchChannel) {
+    if (existingSettings.length > 0) {
       const setting = existingSettings[0];
-      try {
-        await connectToTwitch(setting.twitchChannel, setting.twitchUsername || undefined);
-        console.log(`Auto-connected to Twitch channel: ${setting.twitchChannel}`);
-      } catch (error) {
-        console.error("Failed to auto-connect to Twitch:", error);
+      const channel = setting.twitchChannel;
+      if (channel) {
+        try {
+          await connectToTwitch(channel, setting.twitchUsername ?? undefined);
+          console.log(`Auto-connected to Twitch channel: ${channel}`);
+        } catch (error) {
+          console.error("Failed to auto-connect to Twitch:", error);
+        }
       }
     }
   }

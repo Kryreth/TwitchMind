@@ -165,7 +165,10 @@ export class DatabaseStorage implements IStorage {
       const [updated] = await db
         .update(userInsights)
         .set({ 
-          ...insight, 
+          userId: insight.userId,
+          summary: insight.summary,
+          totalMessages: insight.totalMessages,
+          recentTags: insight.recentTags as string[] | undefined,
           lastUpdated: new Date() 
         })
         .where(eq(userInsights.userId, insight.userId))
@@ -174,7 +177,12 @@ export class DatabaseStorage implements IStorage {
     } else {
       const [created] = await db
         .insert(userInsights)
-        .values(insight)
+        .values({
+          userId: insight.userId,
+          summary: insight.summary,
+          totalMessages: insight.totalMessages,
+          recentTags: insight.recentTags as string[] | undefined,
+        })
         .returning();
       return created;
     }
@@ -242,7 +250,13 @@ export class DatabaseStorage implements IStorage {
   async createAiAnalysis(insertAnalysis: InsertAiAnalysis): Promise<AiAnalysis> {
     const [analysis] = await db
       .insert(aiAnalysis)
-      .values(insertAnalysis)
+      .values({
+        messageId: insertAnalysis.messageId,
+        sentiment: insertAnalysis.sentiment,
+        sentimentScore: insertAnalysis.sentimentScore,
+        toxicity: insertAnalysis.toxicity,
+        categories: insertAnalysis.categories as string[] | undefined,
+      })
       .returning();
     return analysis;
   }
@@ -308,7 +322,11 @@ export class DatabaseStorage implements IStorage {
   async createSettings(insertSettings: InsertSettings): Promise<Settings> {
     const [setting] = await db
       .insert(settings)
-      .values(insertSettings)
+      .values({
+        ...insertSettings,
+        topicAllowlist: insertSettings.topicAllowlist as string[] | undefined,
+        topicBlocklist: insertSettings.topicBlocklist as string[] | undefined,
+      })
       .returning();
     return setting;
   }
@@ -316,7 +334,12 @@ export class DatabaseStorage implements IStorage {
   async updateSettings(id: string, updateData: Partial<InsertSettings>): Promise<Settings> {
     const [setting] = await db
       .update(settings)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set({ 
+        ...updateData, 
+        topicAllowlist: updateData.topicAllowlist as string[] | undefined,
+        topicBlocklist: updateData.topicBlocklist as string[] | undefined,
+        updatedAt: new Date() 
+      })
       .where(eq(settings.id, id))
       .returning();
     return setting;
