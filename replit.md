@@ -10,14 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
 
-### DachiStream Settings Reorganization
-- **New DachiStream Page**: Created dedicated `/dachistream` page for all DachiStream-related configuration
-- **Settings Page Cleanup**: Removed DachiStream and Topic Filter sections from Settings page for better organization
-- **DachiStream Settings Include**:
+### DachiStream Settings Reorganization (Complete Consolidation)
+- **New DachiStream Page**: Created dedicated `/dachistream` page for ALL stream interaction and AI behavior settings
+- **Settings Page Cleanup**: Removed DachiStream, Topic Filters, AND DachiPool sections from Settings page
+- **DachiStream Page Now Includes**:
   - Message Selection Strategy (most_active, random, new_chatter)
   - Response Modes (Database Personalization, Streamer Voice-Only Mode)
   - Topic Filters (Allowed Topics, Blocked Topics)
+  - General Configuration (Enable DachiPool, Energy Level, Mode, Max Characters)
+  - Shoutouts & TTS (Auto Shoutouts, Shoutout Cooldown, ElevenLabs TTS)
+  - Message Priority System (Visual display of 5-tier priority: Mods > Raids > VIPs > Subs/Bits > Regular viewers)
 - **Navigation**: Added DachiStream menu item to sidebar with Bolt icon
+- **Settings Page Now**: Only contains Twitch connection, moderation thresholds, and audio settings
 
 ### AI Personality System
 - **AI Controls Page Enhancement**: Moved OpenAI model and temperature settings from Settings to AI Controls
