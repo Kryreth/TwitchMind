@@ -1,7 +1,10 @@
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { ChatMessage, AiAnalysis } from "@shared/schema";
 import { 
   ChatBubbleLeftRightIcon, 
@@ -12,14 +15,40 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+
+interface TwitchStatus {
+  connected: boolean;
+  channel: string | null;
+  messageCount: number;
+}
+
+interface AuthenticatedUser {
+  id: string;
+  twitchUsername: string;
+  twitchDisplayName: string;
+  twitchProfileImageUrl: string | null;
+}
 
 export default function Dashboard() {
+  const { toast } = useToast();
+
   const { data: messages = [], isLoading: messagesLoading } = useQuery<ChatMessage[]>({
     queryKey: ["/api/messages"],
   });
 
   const { data: analyses = [], isLoading: analysesLoading } = useQuery<AiAnalysis[]>({
     queryKey: ["/api/analyses"],
+  });
+
+  const { data: twitchStatus } = useQuery<TwitchStatus>({
+    queryKey: ["/api/twitch/status"],
+    refetchInterval: 3000, // Refresh every 3 seconds
+  });
+
+  const { data: authenticatedUser } = useQuery<AuthenticatedUser>({
+    queryKey: ["/api/auth/user"],
+    retry: false,
   });
 
   const { data: elevenLabsUsage } = useQuery<{
@@ -29,6 +58,41 @@ export default function Dashboard() {
   }>({
     queryKey: ["/api/elevenlabs/usage"],
     refetchInterval: 60000, // Refresh every 60 seconds
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      if (!authenticatedUser) {
+        throw new Error("Please log in with Twitch first");
+      }
+      const response = await fetch("/api/twitch/connect", {
+        method: "POST",
+        body: JSON.stringify({
+          channel: authenticatedUser.twitchUsername,
+          username: authenticatedUser.twitchUsername,
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to connect");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Connected!",
+        description: "Successfully connected to Twitch chat",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/twitch/status"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to connect to Twitch",
+        variant: "destructive",
+      });
+    },
   });
 
   const totalMessages = messages.length;
@@ -96,6 +160,52 @@ export default function Dashboard() {
           loading={analysesLoading}
         />
       </div>
+
+      {authenticatedUser && (
+        <Card data-testid="card-twitch-connection">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Twitch Connection</CardTitle>
+              {twitchStatus?.connected ? (
+                <Badge variant="secondary" className="gap-2" data-testid="badge-connected">
+                  <div className="h-2 w-2 rounded-full bg-chart-2 animate-pulse" />
+                  Connected
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-2" data-testid="badge-disconnected">
+                  <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                  Disconnected
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Channel: {authenticatedUser.twitchDisplayName}</p>
+                {twitchStatus?.connected ? (
+                  <p className="text-xs text-muted-foreground">
+                    Monitoring {twitchStatus.channel} - {twitchStatus.messageCount} messages received
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Click connect to start monitoring your chat
+                  </p>
+                )}
+              </div>
+              {!twitchStatus?.connected && (
+                <Button 
+                  onClick={() => connectMutation.mutate()}
+                  disabled={connectMutation.isPending}
+                  data-testid="button-connect-chat"
+                >
+                  {connectMutation.isPending ? "Connecting..." : "Connect to Chat"}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {elevenLabsUsage && (
         <Card data-testid="card-elevenlabs-usage">

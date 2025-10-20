@@ -37,16 +37,33 @@ export async function connectToTwitch(channel: string, username: string = "justi
     }
   }
 
+  // Check if we have an authenticated user with OAuth token
+  const authenticatedUser = await storage.getAuthenticatedUser();
+  let identity: { username: string; password?: string } | undefined;
+
+  if (authenticatedUser && authenticatedUser.accessToken) {
+    // Use OAuth token for authenticated connection
+    identity = {
+      username: authenticatedUser.twitchUsername,
+      password: `oauth:${authenticatedUser.accessToken}`,
+    };
+    console.log(`Connecting to Twitch as authenticated user: ${authenticatedUser.twitchUsername}`);
+  } else if (username !== "justinfan12345") {
+    // If specific username provided but no token, log warning and connect anonymously
+    console.warn(`No OAuth token found for ${username}, connecting anonymously instead`);
+    identity = undefined; // Anonymous connection
+  } else {
+    // Fully anonymous connection
+    identity = undefined;
+  }
+
   twitchClient = new tmi.Client({
     options: { debug: false },
     connection: {
       reconnect: true,
       secure: true,
     },
-    identity: {
-      username: username,
-      password: undefined,
-    },
+    identity: identity,
     channels: [channel],
   });
 
