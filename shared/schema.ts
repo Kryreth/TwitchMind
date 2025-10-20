@@ -66,6 +66,15 @@ export const aiCommands = pgTable("ai_commands", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Streamer Speaks Table - History of polished streamer messages
+export const streamerSpeaks = pgTable("streamer_speaks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalText: text("original_text").notNull(), // Raw transcription
+  polishedText: text("polished_text").notNull(), // GPT-cleaned version
+  wasSpoken: boolean("was_spoken").notNull().default(false), // Was it sent to TTS
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
 // Settings Table - Enhanced with DachiPool configuration
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -86,6 +95,31 @@ export const settings = pgTable("settings", {
   dachipoolElevenlabsEnabled: boolean("dachipool_elevenlabs_enabled").notNull().default(false),
   dachipoolElevenlabsVoice: text("dachipool_elevenlabs_voice").default("Default"),
   autoShoutoutsEnabled: boolean("auto_shoutouts_enabled").notNull().default(true),
+  
+  // Audio Settings
+  audioMicMode: text("audio_mic_mode").notNull().default("muted"), // muted, passthrough
+  audioVoiceSelection: text("audio_voice_selection").default("Default"),
+  audioAiVoiceActive: boolean("audio_ai_voice_active").notNull().default(true),
+  audioSpeechCleanup: boolean("audio_speech_cleanup").notNull().default(true),
+  audioFallbackToTextOnly: boolean("audio_fallback_to_text_only").notNull().default(true),
+  audioCooldownBetweenReplies: integer("audio_cooldown_between_replies").notNull().default(5), // seconds
+  audioMaxVoiceLength: integer("audio_max_voice_length").notNull().default(500), // characters
+  
+  // Topic Filters
+  topicAllowlist: jsonb("topic_allowlist").$type<string[]>().default(sql`'["gaming", "anime", "chatting"]'::jsonb`),
+  topicBlocklist: jsonb("topic_blocklist").$type<string[]>().default(sql`'["politics", "religion"]'::jsonb`),
+  useDatabasePersonalization: boolean("use_database_personalization").notNull().default(true),
+  streamerVoiceOnlyMode: boolean("streamer_voice_only_mode").notNull().default(false),
+  
+  // DachiStream Settings
+  dachiastreamSelectionStrategy: text("dachiastream_selection_strategy").notNull().default("most_active"), // most_active, random, new_chatter
+  dachiastreamPaused: boolean("dachiastream_paused").notNull().default(false),
+  
+  // ElevenLabs Usage Tracking
+  elevenlabsVoiceId: text("elevenlabs_voice_id"),
+  elevenlabsUsageQuota: integer("elevenlabs_usage_quota").default(0),
+  elevenlabsUsageUsed: integer("elevenlabs_usage_used").default(0),
+  elevenlabsUsageLastChecked: timestamp("elevenlabs_usage_last_checked"),
   
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -137,6 +171,11 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   updatedAt: true,
 });
 
+export const insertStreamerSpeaksSchema = createInsertSchema(streamerSpeaks).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Types
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
@@ -155,6 +194,9 @@ export type InsertAiCommand = z.infer<typeof insertAiCommandSchema>;
 
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+
+export type StreamerSpeaks = typeof streamerSpeaks.$inferSelect;
+export type InsertStreamerSpeaks = z.infer<typeof insertStreamerSpeaksSchema>;
 
 // Extended types for frontend
 export type ChatMessageWithAnalysis = ChatMessage & {
