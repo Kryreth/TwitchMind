@@ -10,6 +10,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
 
+### Auto-Send to Chat & Real-Time Features (Latest)
+- **Auto-Send to Chat**: AI responses can now be automatically sent to Twitch chat when enabled via DachiStream settings toggle
+  - New `sendChatMessage()` function in twitch-client.ts handles channel/username validation
+  - Integration into AI response flow with success/error logging
+  - Requires authenticated Twitch connection (OAuth)
+- **Countdown Timer**: Monitor page displays real-time countdown showing seconds until next DachiStream cycle
+  - Exposed `secondsUntilNextCycle` in DachiStream service state
+  - Live updates via WebSocket broadcasts
+- **VIP Autocomplete**: VIP Management search bar features live autocomplete from active chatters
+  - 300ms debounced search queries recent chat participants
+  - Powered by Active Chatters Service tracking users with 10-minute activity window
+  - API endpoint `/api/active-chatters/search` for username lookups
+- **Token Refresh System**: Automatic Twitch OAuth token renewal before expiration
+  - Database schema includes refresh tokens and expiration timestamps
+  - Auto-refresh triggered 7 days before token expiry
+  - Graceful error handling with user notifications
+
 ### DachiStream Settings Reorganization (Complete Consolidation)
 - **New DachiStream Page**: Created dedicated `/dachistream` page for ALL stream interaction and AI behavior settings
 - **Settings Page Cleanup**: Removed DachiStream, Topic Filters, AND DachiPool sections from Settings page
@@ -17,7 +34,7 @@ Preferred communication style: Simple, everyday language.
   - Message Selection Strategy (most_active, random, new_chatter)
   - Response Modes (Database Personalization, Streamer Voice-Only Mode)
   - Topic Filters (Allowed Topics, Blocked Topics)
-  - General Configuration (Enable DachiPool, Energy Level, Mode, Max Characters)
+  - General Configuration (Enable DachiPool, Auto-Send to Chat, Energy Level, Mode, Max Characters)
   - Shoutouts & TTS (Auto Shoutouts, Shoutout Cooldown, ElevenLabs TTS)
   - Message Priority System (Visual display of 5-tier priority: Mods > Raids > VIPs > Subs/Bits > Regular viewers)
 - **Navigation**: Added DachiStream menu item to sidebar with Bolt icon
