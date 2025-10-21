@@ -22,6 +22,7 @@ export interface DachiStreamState {
   bufferCount: number;
   lastCycleTime: Date | null;
   nextCycleTime: Date | null;
+  secondsUntilNextCycle: number;
   selectedMessage: ChatMessage | null;
   aiResponse: string | null;
   error: string | null;
@@ -328,25 +329,23 @@ export class DachiStreamService {
   
   private broadcastState() {
     if (this.onStatusChange) {
-      const state: DachiStreamState = {
-        status: this.currentStatus,
-        bufferCount: this.messageBuffer.messages.length,
-        lastCycleTime: this.lastCycleTime,
-        nextCycleTime: this.lastCycleTime ? new Date(this.lastCycleTime.getTime() + 15000) : null,
-        selectedMessage: null,
-        aiResponse: null,
-        error: null,
-      };
-      this.onStatusChange(state);
+      this.onStatusChange(this.getState());
     }
   }
   
   getState(): DachiStreamState {
+    const nextCycleTime = this.lastCycleTime ? new Date(this.lastCycleTime.getTime() + 15000) : null;
+    const now = new Date();
+    const secondsUntilNextCycle = nextCycleTime 
+      ? Math.max(0, Math.floor((nextCycleTime.getTime() - now.getTime()) / 1000))
+      : 15;
+    
     return {
       status: this.currentStatus,
       bufferCount: this.messageBuffer.messages.length,
       lastCycleTime: this.lastCycleTime,
-      nextCycleTime: this.lastCycleTime ? new Date(this.lastCycleTime.getTime() + 15000) : null,
+      nextCycleTime,
+      secondsUntilNextCycle,
       selectedMessage: null,
       aiResponse: null,
       error: null,
