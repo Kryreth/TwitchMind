@@ -130,6 +130,7 @@ export const settings = pgTable("settings", {
   // DachiStream Settings
   dachiastreamSelectionStrategy: text("dachiastream_selection_strategy").notNull().default("most_active"), // most_active, random, new_chatter
   dachiastreamPaused: boolean("dachiastream_paused").notNull().default(false),
+  dachiastreamAutoSendToChat: boolean("dachiastream_auto_send_to_chat").notNull().default(false),
   
   // ElevenLabs Usage Tracking
   elevenlabsVoiceId: text("elevenlabs_voice_id"),

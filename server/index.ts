@@ -120,6 +120,17 @@ app.use((req, res, next) => {
               // Log the AI response
               dachiStreamService.logAIResponse(aiResponse);
               
+              // Send to Twitch chat if auto-send is enabled
+              if (settings.dachiastreamAutoSendToChat) {
+                const { sendChatMessage } = await import("./twitch-client");
+                const sent = await sendChatMessage(aiResponse);
+                if (sent) {
+                  console.log("✓ AI response sent to Twitch chat");
+                } else {
+                  console.error("✗ Failed to send AI response to Twitch chat");
+                }
+              }
+              
               // Generate TTS if enabled
               if (settings.audioAiVoiceActive && settings.dachipoolElevenlabsEnabled) {
                 const ttsResult = await elevenLabsService.generateTTS(aiResponse);

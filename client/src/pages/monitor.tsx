@@ -93,14 +93,23 @@ export default function Monitor() {
               {stateLoading ? (
                 <div className="text-sm text-muted-foreground">Loading...</div>
               ) : state ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <div className={`h-3 w-3 rounded-full ${statusColors[state.status]} animate-pulse`} />
                     <span className="text-2xl font-bold" data-testid="text-status">
                       {statusLabels[state.status]}
                     </span>
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="text-xs text-muted-foreground">Next cycle in</div>
+                      <div className="text-xl font-bold text-primary" data-testid="text-countdown">
+                        {state.secondsUntilNextCycle} seconds
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground space-y-1">
                     {state.lastCycleTime && (
                       <div>Last cycle: {format(new Date(state.lastCycleTime), "HH:mm:ss")}</div>
                     )}

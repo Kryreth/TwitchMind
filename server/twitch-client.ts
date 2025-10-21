@@ -260,3 +260,30 @@ export function disconnectFromTwitch() {
 export function getTwitchClient() {
   return twitchClient;
 }
+
+/**
+ * Send a message to the currently connected Twitch channel
+ */
+export async function sendChatMessage(message: string): Promise<boolean> {
+  if (!twitchClient) {
+    console.error("Cannot send chat message: Twitch client not connected");
+    return false;
+  }
+
+  const authenticatedUser = await storage.getAuthenticatedUser();
+  if (!authenticatedUser) {
+    console.error("Cannot send chat message: No authenticated user");
+    return false;
+  }
+
+  const channel = authenticatedUser.twitchUsername;
+  
+  try {
+    await twitchClient.say(channel, message);
+    console.log(`Sent to Twitch chat: ${message}`);
+    return true;
+  } catch (error) {
+    console.error("Failed to send message to Twitch chat:", error);
+    return false;
+  }
+}
