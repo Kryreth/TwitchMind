@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,26 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Shield, Trash2, Plus, Clock } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { UserProfile } from "@shared/schema";
+
+interface ActiveChatter {
+  username: string;
+  displayName: string;
+  userId: string;
+  lastMessageTime: Date;
+  messageCount: number;
+  isVip: boolean;
+  isMod: boolean;
+  isSubscriber: boolean;
+}
 
 export default function VIPManagement() {
   const { toast } = useToast();
   const [newUsername, setNewUsername] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const { data: vips = [], isLoading } = useQuery<UserProfile[]>({
     queryKey: ["/api/users/vips"],
@@ -20,6 +35,18 @@ export default function VIPManagement() {
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
   });
+
+  const { data: suggestions = [] } = useQuery<ActiveChatter[]>({
+    queryKey: ["/api/chatters/search", searchQuery],
+    enabled: searchQuery.length > 0 && showSuggestions,
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(newUsername);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [newUsername]);
 
   const toggleVipMutation = useMutation({
     mutationFn: async ({ userId, isVip }: { userId: string; isVip: boolean }) => {
@@ -114,8 +141,9 @@ export default function VIPManagement() {
     return `${hoursLeft}h cooldown`;
   };
 
-  const autoShoutoutsEnabled = settings && settings[0]?.autoShoutoutsEnabled;
-  const cooldownHours = settings && settings[0]?.dachipoolShoutoutCooldownHours || 24;
+  const settingsArray = Array.isArray(settings) ? settings : [];
+  const autoShoutoutsEnabled = settingsArray[0]?.autoShoutoutsEnabled;
+  const cooldownHours = settingsArray[0]?.dachipoolShoutoutCooldownHours || 24;
 
   return (
     <div className="p-6 space-y-6">
@@ -135,13 +163,60 @@ export default function VIPManagement() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            <Input
-              placeholder="Enter username..."
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddVip()}
-              data-testid="input-vip-username"
-            />
+            <Popover open={showSuggestions && suggestions.length > 0} onOpenChange={setShowSuggestions}>
+              <PopoverTrigger asChild>
+                <div className="flex-1 relative">
+                  <Input
+                    placeholder="Enter username or search active chatters..."
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleAddVip();
+                        setShowSuggestions(false);
+                      }
+                      if (e.key === "Escape") {
+                        setShowSuggestions(false);
+                      }
+                    }}
+                    data-testid="input-vip-username"
+                  />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command>
+                  <CommandList>
+                    <CommandEmpty>No active chatters found</CommandEmpty>
+                    <CommandGroup heading="Active Chatters">
+                      {suggestions.map((chatter) => (
+                        <CommandItem
+                          key={chatter.userId}
+                          value={chatter.username}
+                          onSelect={() => {
+                            setNewUsername(chatter.username);
+                            setShowSuggestions(false);
+                          }}
+                          data-testid={`suggestion-${chatter.username}`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{chatter.username}</span>
+                              {chatter.isMod && <Badge variant="secondary">Mod</Badge>}
+                              {chatter.isSubscriber && <Badge variant="secondary">Sub</Badge>}
+                              {chatter.isVip && <Badge>VIP</Badge>}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {chatter.messageCount} messages
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <Button 
               onClick={handleAddVip}
               disabled={!newUsername.trim() || addVipMutation.isPending}
@@ -192,7 +267,7 @@ export default function VIPManagement() {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         <span data-testid={`text-vip-last-shoutout-${vip.userId}`}>
-                          Last shoutout: {getTimeSinceShoutout(vip.shoutoutLastGiven)}
+                          Last shoutout: {getTimeSinceShoutout(vip.shoutoutLastGiven ? new Date(vip.shoutoutLastGiven).toISOString() : null)}
                         </span>
                       </div>
                     </div>
@@ -200,7 +275,7 @@ export default function VIPManagement() {
                   
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" data-testid={`badge-vip-cooldown-${vip.userId}`}>
-                      {getCooldownStatus(vip.shoutoutLastGiven, cooldownHours)}
+                      {getCooldownStatus(vip.shoutoutLastGiven ? new Date(vip.shoutoutLastGiven).toISOString() : null, cooldownHours)}
                     </Badge>
                     {vip.isMod && <Badge variant="secondary">Mod</Badge>}
                     {vip.isSubscriber && <Badge variant="secondary">Sub</Badge>}
