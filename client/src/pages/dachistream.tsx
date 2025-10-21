@@ -20,6 +20,7 @@ interface Settings {
   useDatabasePersonalization: boolean;
   streamerVoiceOnlyMode: boolean;
   dachiastreamSelectionStrategy: string;
+  dachiastreamAutoSendToChat: boolean;
   dachipoolEnabled: boolean;
   dachipoolMaxChars: number;
   dachipoolEnergy: string;
@@ -38,6 +39,7 @@ export default function DachiStream() {
   const [useDatabasePersonalization, setUseDatabasePersonalization] = useState(true);
   const [streamerVoiceOnlyMode, setStreamerVoiceOnlyMode] = useState(false);
   const [dachiastreamSelectionStrategy, setDachiastreamSelectionStrategy] = useState("most_active");
+  const [dachiastreamAutoSendToChat, setDachiastreamAutoSendToChat] = useState(false);
   
   // DachiPool settings
   const [dachipoolEnabled, setDachipoolEnabled] = useState(true);
@@ -60,6 +62,7 @@ export default function DachiStream() {
       setUseDatabasePersonalization(setting.useDatabasePersonalization ?? true);
       setStreamerVoiceOnlyMode(setting.streamerVoiceOnlyMode ?? false);
       setDachiastreamSelectionStrategy(setting.dachiastreamSelectionStrategy || "most_active");
+      setDachiastreamAutoSendToChat(setting.dachiastreamAutoSendToChat ?? false);
       
       setDachipoolEnabled(setting.dachipoolEnabled ?? true);
       setDachipoolMaxChars([setting.dachipoolMaxChars || 1000]);
@@ -101,6 +104,7 @@ export default function DachiStream() {
       useDatabasePersonalization,
       streamerVoiceOnlyMode,
       dachiastreamSelectionStrategy,
+      dachiastreamAutoSendToChat,
       dachipoolEnabled,
       dachipoolMaxChars: dachipoolMaxChars[0],
       dachipoolEnergy,
@@ -241,6 +245,21 @@ export default function DachiStream() {
                   checked={dachipoolEnabled}
                   onCheckedChange={setDachipoolEnabled}
                   data-testid="switch-dachipool-enabled"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="auto-send-chat">Auto-Send to Chat</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Send AI responses to Twitch chat
+                  </p>
+                </div>
+                <Switch
+                  id="auto-send-chat"
+                  checked={dachiastreamAutoSendToChat}
+                  onCheckedChange={setDachiastreamAutoSendToChat}
+                  data-testid="switch-auto-send-chat"
                 />
               </div>
 
