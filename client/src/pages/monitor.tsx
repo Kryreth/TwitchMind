@@ -20,6 +20,7 @@ interface DachiStreamState {
   bufferCount: number;
   lastCycleTime: Date | null;
   nextCycleTime: Date | null;
+  secondsUntilNextCycle: number;
   selectedMessage: ChatMessage | null;
   aiResponse: string | null;
   error: string | null;
@@ -128,7 +129,14 @@ export default function Monitor() {
                     {buffer.length} messages
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Waiting for next cycle
+                    {state?.secondsUntilNextCycle !== undefined && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span data-testid="text-countdown">
+                          {state.secondsUntilNextCycle}s until next cycle
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

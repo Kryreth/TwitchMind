@@ -4,10 +4,12 @@ import { analyzeChatMessage, generateAiResponse } from "./openai-service";
 import { WebSocket } from "ws";
 import type { DachiStreamService } from "./dachistream-service";
 import { twitchOAuthService } from "./twitch-oauth-service";
+import { ActiveChattersService } from "./active-chatters-service";
 
 let twitchClient: tmi.Client | null = null;
 const connectedClients: Set<WebSocket> = new Set();
 let dachiStreamService: DachiStreamService | null = null;
+export const activeChattersService = new ActiveChattersService();
 
 export function setDachiStreamService(service: DachiStreamService) {
   dachiStreamService = service;
@@ -185,6 +187,10 @@ export async function connectToTwitch(channel: string, username: string = "justi
         ) as Record<string, string> : {},
         emotes: tags.emotes || null,
       });
+
+      // Track active chatter
+      const userProfile = await storage.getUserProfile(userId);
+      activeChattersService.addMessage(chatMessage, userProfile || undefined);
 
       // Add message to DachiStream buffer
       if (dachiStreamService) {

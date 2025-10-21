@@ -161,6 +161,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Active Chatters
+  app.get("/api/chatters/active", async (req, res) => {
+    try {
+      const { getTwitchClient, activeChattersService } = await import("./twitch-client");
+      const chatters = activeChattersService.getActiveChatters();
+      res.json(chatters);
+    } catch (error) {
+      console.error("Error fetching active chatters:", error);
+      res.status(500).json({ error: "Failed to fetch active chatters" });
+    }
+  });
+
+  app.get("/api/chatters/search", async (req, res) => {
+    try {
+      const { activeChattersService } = await import("./twitch-client");
+      const query = req.query.q as string || "";
+      const results = activeChattersService.searchChatters(query);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching chatters:", error);
+      res.status(500).json({ error: "Failed to search chatters" });
+    }
+  });
+
   // User Insights
   app.get("/api/insights", async (req, res) => {
     try {
