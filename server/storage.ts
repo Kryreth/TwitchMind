@@ -379,6 +379,20 @@ export class DatabaseStorage implements IStorage {
   async deleteAuthenticatedUser(): Promise<void> {
     await db.delete(authenticatedUsers);
   }
+
+  async updateAuthenticatedUserTokens(userId: string, accessToken: string, refreshToken: string, expiresAt: Date): Promise<AuthenticatedUser> {
+    const [updated] = await db
+      .update(authenticatedUsers)
+      .set({ 
+        accessToken,
+        refreshToken,
+        tokenExpiresAt: expiresAt,
+        updatedAt: new Date()
+      })
+      .where(eq(authenticatedUsers.id, userId))
+      .returning();
+    return updated;
+  }
 }
 
 export const storage = new DatabaseStorage();

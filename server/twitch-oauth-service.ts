@@ -130,6 +130,20 @@ export class TwitchOAuthService {
       return false;
     }
   }
+
+  /**
+   * Checks if token is expired or about to expire (within 1 hour)
+   */
+  isTokenExpired(tokenExpiresAt: Date | null): boolean {
+    if (!tokenExpiresAt) return true;
+    
+    const now = new Date();
+    const expiresAt = new Date(tokenExpiresAt);
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    
+    // Return true if token expires within the next hour
+    return expiresAt <= oneHourFromNow;
+  }
 }
 
 export const twitchOAuthService = new TwitchOAuthService();

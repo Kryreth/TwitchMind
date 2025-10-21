@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { analyzeChatMessage, generateAiResponse } from "./openai-service";
 import { WebSocket } from "ws";
 import type { DachiStreamService } from "./dachistream-service";
+import { twitchOAuthService } from "./twitch-oauth-service";
 
 let twitchClient: tmi.Client | null = null;
 const connectedClients: Set<WebSocket> = new Set();
@@ -28,6 +29,56 @@ function broadcastToClients(event: string, data: any) {
   });
 }
 
+/**
+ * Ensures the access token is valid, refreshing if necessary
+ */
+async function ensureValidAccessToken() {
+  const user = await storage.getAuthenticatedUser();
+  
+  if (!user) {
+    console.log("No authenticated user found");
+    return null;
+  }
+  
+  // Check if token is expired or about to expire
+  if (twitchOAuthService.isTokenExpired(user.tokenExpiresAt)) {
+    console.log("Access token is expired or expiring soon, attempting refresh...");
+    
+    if (!user.refreshToken) {
+      console.error("No refresh token available - user needs to re-authenticate");
+      return null;
+    }
+    
+    try {
+      // Refresh the token
+      const tokenResponse = await twitchOAuthService.refreshAccessToken(user.refreshToken);
+      
+      // Calculate new expiration
+      const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
+      
+      // Update in database
+      await storage.updateAuthenticatedUserTokens(
+        user.id,
+        tokenResponse.access_token,
+        tokenResponse.refresh_token,
+        expiresAt
+      );
+      
+      console.log(`✓ Token refreshed successfully, expires at: ${expiresAt.toISOString()}`);
+      
+      return tokenResponse.access_token;
+    } catch (error) {
+      console.error("Failed to refresh token:", error);
+      console.error("User needs to re-authenticate via Settings page");
+      return null;
+    }
+  }
+  
+  // Token is still valid
+  console.log(`✓ Access token is valid until: ${user.tokenExpiresAt?.toISOString()}`);
+  return user.accessToken;
+}
+
 export async function connectToTwitch(channel: string, username: string = "justinfan12345") {
   if (twitchClient) {
     try {
@@ -37,26 +88,30 @@ export async function connectToTwitch(channel: string, username: string = "justi
     }
   }
 
-  // Check if we have an authenticated user with OAuth token
+  // Ensure we have a valid access token (refresh if needed)
+  const validAccessToken = await ensureValidAccessToken();
+  
+  // Get the authenticated user (may have been updated with new token)
   const authenticatedUser = await storage.getAuthenticatedUser();
   console.log(`[DEBUG] getAuthenticatedUser result:`, authenticatedUser ? {
     username: authenticatedUser.twitchUsername,
     hasAccessToken: !!authenticatedUser.accessToken,
-    tokenLength: authenticatedUser.accessToken?.length || 0
+    tokenLength: authenticatedUser.accessToken?.length || 0,
+    tokenExpires: authenticatedUser.tokenExpiresAt?.toISOString()
   } : 'null');
   
   let identity: { username: string; password?: string } | undefined;
 
-  if (authenticatedUser && authenticatedUser.accessToken) {
+  if (validAccessToken && authenticatedUser) {
     // Use OAuth token for authenticated connection
     identity = {
       username: authenticatedUser.twitchUsername,
-      password: `oauth:${authenticatedUser.accessToken}`,
+      password: `oauth:${validAccessToken}`,
     };
     console.log(`Connecting to Twitch as authenticated user: ${authenticatedUser.twitchUsername}`);
   } else if (username !== "justinfan12345") {
     // If specific username provided but no token, log warning and connect anonymously
-    console.warn(`No OAuth token found for ${username}, connecting anonymously instead`);
+    console.warn(`No valid OAuth token found for ${username}, connecting anonymously instead`);
     identity = undefined; // Anonymous connection
   } else {
     // Fully anonymous connection
