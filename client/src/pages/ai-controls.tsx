@@ -36,8 +36,8 @@ export default function AiControls() {
   const [prompt, setPrompt] = useState("");
   const [responseType, setResponseType] = useState("direct");
 
-  // OpenAI Settings
-  const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
+  // Groq AI Settings
+  const [aiModel, setAiModel] = useState("llama-3.3-70b-versatile");
   const [temperature, setTemperature] = useState([7]);
   const [aiPersonality, setAiPersonality] = useState("Casual");
 
@@ -52,7 +52,7 @@ export default function AiControls() {
   useEffect(() => {
     if (settings && settings.length > 0) {
       const setting = settings[0];
-      setOpenaiModel(setting.dachipoolOpenaiModel || "gpt-4o-mini");
+      setAiModel(setting.dachipoolOpenaiModel || "llama-3.3-70b-versatile");
       setTemperature([setting.dachipoolOpenaiTemp || 7]);
       setAiPersonality(setting.aiPersonality || "Casual");
     }
@@ -122,7 +122,7 @@ export default function AiControls() {
 
   const handleSaveAiSettings = () => {
     updateAiSettingsMutation.mutate({
-      dachipoolOpenaiModel: openaiModel,
+      dachipoolOpenaiModel: aiModel,
       dachipoolOpenaiTemp: temperature[0],
       aiPersonality,
     });
@@ -198,15 +198,17 @@ export default function AiControls() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="model">OpenAI Model</Label>
-                <Select value={openaiModel} onValueChange={setOpenaiModel}>
+                <Label htmlFor="model">Groq AI Model</Label>
+                <Select value={aiModel} onValueChange={setAiModel}>
                   <SelectTrigger id="model" data-testid="select-model">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</SelectItem>
-                    <SelectItem value="gpt-4o">GPT-4o (Balanced)</SelectItem>
-                    <SelectItem value="gpt-4-turbo">GPT-4 Turbo (Advanced)</SelectItem>
+                    <SelectItem value="llama-3.3-70b-versatile">Llama 3.3 70B (Best Quality)</SelectItem>
+                    <SelectItem value="llama-3.1-70b-versatile">Llama 3.1 70B (Balanced)</SelectItem>
+                    <SelectItem value="mixtral-8x7b-32768">Mixtral 8x7B (Long Context)</SelectItem>
+                    <SelectItem value="llama-3.1-8b-instant">Llama 3.1 8B (Fastest)</SelectItem>
+                    <SelectItem value="gemma2-9b-it">Gemma 2 9B (Efficient)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
