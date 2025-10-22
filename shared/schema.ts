@@ -105,7 +105,7 @@ export const settings = pgTable("settings", {
   dachipoolEnergy: text("dachipool_energy").notNull().default("Balanced"), // Balanced, High, Low
   dachipoolMode: text("dachipool_mode").notNull().default("Auto"), // Auto, Manual
   dachipoolShoutoutCooldownHours: integer("dachipool_shoutout_cooldown_hours").notNull().default(24),
-  dachipoolOpenaiModel: text("dachipool_openai_model").notNull().default("gpt-4o-mini"),
+  dachipoolOpenaiModel: text("dachipool_openai_model").notNull().default("llama-3.3-70b-versatile"),
   dachipoolOpenaiTemp: integer("dachipool_openai_temp").notNull().default(7), // Stored as 0-10, divide by 10
   aiPersonality: text("ai_personality").notNull().default("Casual"), // Casual, Comedy, Quirky, Serious, Gaming, Professional
   dachipoolElevenlabsEnabled: boolean("dachipool_elevenlabs_enabled").notNull().default(false),
