@@ -1,8 +1,8 @@
-// Reference: javascript_openai blueprint
-import OpenAI from "openai";
+// GroqCloud AI Service - Migrated from OpenAI
+import Groq from "groq-sdk";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize Groq client
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export interface SentimentAnalysisResult {
   sentiment: "positive" | "neutral" | "negative";
@@ -13,8 +13,8 @@ export interface SentimentAnalysisResult {
 
 export async function analyzeChatMessage(message: string): Promise<SentimentAnalysisResult> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "system",
@@ -34,6 +34,7 @@ Respond with JSON in this exact format:
         },
       ],
       response_format: { type: "json_object" },
+      temperature: 0.3,
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -45,7 +46,7 @@ Respond with JSON in this exact format:
       categories: result.categories || [],
     };
   } catch (error) {
-    console.error("Error analyzing message with OpenAI:", error);
+    console.error("Error analyzing message with Groq:", error);
     return {
       sentiment: "neutral",
       sentimentScore: 3,
@@ -57,8 +58,8 @@ Respond with JSON in this exact format:
 
 export async function generateAiResponse(prompt: string, userMessage: string): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "system",
@@ -69,7 +70,8 @@ export async function generateAiResponse(prompt: string, userMessage: string): P
           content: userMessage,
         },
       ],
-      max_completion_tokens: 200,
+      max_tokens: 200,
+      temperature: 0.7,
     });
 
     return response.choices[0].message.content || "Unable to generate response.";
@@ -168,7 +170,7 @@ export async function generateDachiStreamResponse(
       ? `${context}\n\n---\n\nRESPOND TO: ${userMessage}`
       : `RESPOND TO: ${userMessage}`;
 
-    const response = await openai.chat.completions.create({
+    const response = await groq.chat.completions.create({
       model: settings.model,
       temperature: settings.temperature,
       messages: [
@@ -181,7 +183,7 @@ export async function generateDachiStreamResponse(
           content: fullUserMessage,
         },
       ],
-      max_completion_tokens: Math.ceil(settings.maxChars / 3),
+      max_tokens: Math.ceil(settings.maxChars / 3),
     });
 
     const aiResponse = response.choices[0].message.content || "Unable to generate response.";
@@ -205,8 +207,8 @@ export async function generateDachiStreamResponse(
 
 export async function cleanupSpeechText(rawText: string): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
       messages: [
         {
           role: "system",
@@ -221,7 +223,8 @@ export async function cleanupSpeechText(rawText: string): Promise<string> {
           content: rawText,
         },
       ],
-      max_completion_tokens: 150,
+      max_tokens: 150,
+      temperature: 0.3,
     });
 
     return response.choices[0].message.content || rawText;
