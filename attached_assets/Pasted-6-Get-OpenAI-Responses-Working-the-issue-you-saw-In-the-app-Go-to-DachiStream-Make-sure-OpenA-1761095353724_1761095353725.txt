@@ -1,0 +1,139 @@
+6) Get OpenAI Responses Working (the issue you saw)
+
+In the app:
+
+Go to DachiStream
+
+Make sure OpenAI model/personality are selected in AI Controls
+
+Enable (optional) Auto-Send to Chat if you want answers posted to Twitch automatically
+
+Go to your Twitch chat and send a few messages yourself (the AI needs inputs)
+
+Watch Monitor:
+
+Current Buffer should show your messages
+
+You should see logs like “Selected message…”, then “AI responded.”
+
+AI Responses counter increments
+
+If nothing happens:
+
+Re-check Secrets: is OPENAI_API_KEY present?
+
+Restart the repl after adding it
+
+Look at the Replit Console for errors like:
+
+“Missing OPENAI_API_KEY”
+
+“401 Unauthorized” (bad/expired key)
+
+“OpenAI request failed”
+
+Fix the key → restart → send chat again.
+
+7) VIP: Add any Twitch user (what you asked for)
+
+Open VIP Management:
+
+In Add New VIP, type the exact Twitch username (even if they’ve never chatted with you)
+
+Click Add VIP
+
+You should see them appear in the VIP list immediately, with avatar and cooldown data.
+
+If it says “not found” or doesn’t add:
+
+Make sure you’re connected to Twitch (Settings → Twitch Connection)
+
+Try the exact Twitch login (lowercase spelling matters)
+
+If your panel shows a dropdown: you can either pick a suggestion or just press Add VIP with the exact name
+
+Once added, they’re part of:
+
+Auto-shoutouts (24-hour cooldown)
+
+Priority system
+
+Stored in the database for future streams
+
+8) Token Refresh (so you don’t get logged out)
+
+The system renews Twitch tokens automatically 7 days before expiration.
+
+To allow refresh to run, keep the repl awake:
+
+Enable Always On (Replit plan feature), or
+
+Use a free uptime pinger (e.g., UptimeRobot) to hit your root URL every 5–10 minutes
+
+In Settings, you should see token status/connection — if it shows expired, reconnect once; after that auto-refresh keeps it alive.
+
+9) Countdown Timer & Live Updates
+
+Go to Monitor
+
+You should see Seconds Until Next Cycle changing in real time
+
+If it’s frozen or blank:
+
+Check top bar/WebSocket status (should show Connected)
+
+If it’s disconnected, restart the repl and reload the page
+
+Make sure you didn’t block mixed content or websockets in your browser
+
+10) Personality Modes (impact on tone)
+
+Go to AI Controls
+
+Pick one: Casual / Comedy / Quirky / Serious / Gaming / Professional
+
+Save/Apply
+
+Send a test message in chat — the AI response style should match what you selected
+
+11) DachiStream Settings (Consolidated)
+
+Go to DachiStream
+
+Configure:
+
+Message Selection Strategy (most_active / random / new_chatter)
+
+Response Modes (Database personalization / Streamer voice-only)
+
+Topic Filters (Allowed / Blocked)
+
+General (Enable DachiPool, Auto-Send, Energy Level, Mode, Max Characters)
+
+Shoutouts & TTS (Auto shoutouts, cooldown, ElevenLabs toggle)
+
+Priority Tiers (visual: Mods → Raids → VIPs → Subs/Bits → Regulars)
+
+Everything saves immediately or via a visible Save button (depending on the panel).
+
+12) Quick Acceptance Test (5 minutes)
+
+Do these in order to confirm it’s all good:
+
+Twitch Connect → shows “Connected as …”
+
+OpenAI Key → present in Secrets, repl restarted
+
+Chat Test → send “hello” in your Twitch chat
+
+Monitor → shows your message in Current Buffer
+
+AI Response → counter increments; if Auto-Send enabled, it posts in chat
+
+VIP Add → type any real Twitch username, press Add VIP, see it appear
+
+Countdown → timer on Monitor ticks down and resets each cycle
+
+Personality → switch to “Comedy”, send another chat line, see tone change
+
+If any of those 8 fail, tell me which exact step failed and what the screen said, and I’ll zero in on that spot.
