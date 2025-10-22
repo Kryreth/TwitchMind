@@ -10,7 +10,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
 
-### Auto-Send to Chat & Real-Time Features (Latest)
+### GroqCloud AI Migration (Latest - October 22, 2025)
+- **Complete AI Provider Switch**: Migrated from OpenAI to GroqCloud for all AI functionality
+  - Replaced OpenAI SDK with Groq SDK (groq-sdk npm package)
+  - Updated all AI service functions to use Groq API endpoints
+  - Environment variable changed from `OPENAI_API_KEY` to `GROQ_API_KEY`
+  - **Reason for Migration**: OpenAI billing issues preventing AI responses; GroqCloud provides free tier with generous limits
+- **New Groq Models Available**:
+  - llama-3.3-70b-versatile (default - best quality)
+  - llama-3.1-70b-versatile (balanced performance)
+  - mixtral-8x7b-32768 (long context support up to 32K tokens)
+  - llama-3.1-8b-instant (fastest responses)
+  - gemma2-9b-it (efficient option)
+- **AI Controls Page Updated**: Model dropdown now shows Groq models with descriptions
+- **Backward Compatibility**: Database column `dachipoolOpenaiModel` name preserved but stores Groq model names
+- **All Features Tested**: DachiStream responses, AI learning service, personality modes, and sentiment analysis all working with Groq
+
+### Auto-Send to Chat & Real-Time Features
 - **Auto-Send to Chat**: AI responses can now be automatically sent to Twitch chat when enabled via DachiStream settings toggle
   - New `sendChatMessage()` function in twitch-client.ts handles channel/username validation
   - Integration into AI response flow with success/error logging
@@ -114,9 +130,9 @@ Preferred communication style: Simple, everyday language.
 
 **Service Layer**:
 - `storage.ts`: Database abstraction layer implementing IStorage interface with user profile and insights methods
-- `openai-service.ts`: AI analysis and response generation
+- `openai-service.ts`: AI analysis and response generation (renamed but now uses Groq SDK)
 - `twitch-client.ts`: Enhanced Twitch chat connection with role tracking (VIP/mod badges) and auto-shoutout system
-- `ai-learning-service.ts`: Periodic AI user learning engine (runs every 10 minutes)
+- `ai-learning-service.ts`: Periodic AI user learning engine (runs every 10 minutes using Groq AI)
 
 ### External Dependencies
 
@@ -126,15 +142,20 @@ Preferred communication style: Simple, everyday language.
 - Authentication: Anonymous or authenticated username
 - Real-time message streaming from specified Twitch channels
 
-**OpenAI Integration**:
-- Library: `openai` official SDK
-- Model: GPT-5 (latest model as of August 2025)
+**GroqCloud AI Integration** (migrated from OpenAI October 22, 2025):
+- Library: `groq-sdk` official SDK
+- Primary Model: Llama 3.3 70B Versatile (default for best quality)
+- Alternative Models: Llama 3.1 70B, Mixtral 8x7B, Llama 3.1 8B Instant, Gemma 2 9B
 - Features:
   - Sentiment analysis (positive/neutral/negative with 1-5 scoring)
   - Toxicity detection
   - Message categorization
   - Custom AI command responses
+  - DachiStream AI response generation with personality modes
+  - User behavior learning and insights
+  - Speech-to-text cleanup
 - Response format: Structured JSON for consistent parsing
+- **Key Advantage**: Free tier with generous rate limits, extremely fast inference (Groq's LPU architecture)
 
 **Database**:
 - Provider: Neon Serverless PostgreSQL
