@@ -108,9 +108,15 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
       silenceTimeoutRef.current = null;
     }
     
+    // Trigger AI enhancement immediately if there's accumulated text
+    if (autoEnhance && accumulatedTranscriptRef.current.trim()) {
+      console.log("User stopped listening - rephrasing now:", accumulatedTranscriptRef.current.trim());
+      enhanceSpeech(accumulatedTranscriptRef.current.trim());
+    }
+    
     setIsListening(false);
     onEnd?.();
-  }, [onEnd]);
+  }, [onEnd, autoEnhance, enhanceSpeech]);
 
   const resetTranscript = useCallback(() => {
     setTranscript("");

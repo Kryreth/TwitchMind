@@ -400,7 +400,7 @@ export default function Monitor() {
                 {isEnhancing && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>AI is rephrasing (5 sec after you stop speaking)...</span>
+                    <span>AI is rephrasing...</span>
                   </div>
                 )}
                 {enhancedText && (
@@ -415,19 +415,47 @@ export default function Monitor() {
                   </div>
                 )}
                 {enhancedText && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(enhancedText);
-                      toast({
-                        title: "Copied!",
-                        description: "Rephrased text copied to clipboard",
-                      });
-                    }}
-                    data-testid="button-copy-enhanced"
-                  >
-                    Copy Rephrased Text
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(enhancedText);
+                        toast({
+                          title: "Copied!",
+                          description: "Rephrased text copied to clipboard",
+                        });
+                      }}
+                      data-testid="button-copy-enhanced"
+                    >
+                      Copy Text
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (tts.isSpeaking) {
+                          tts.stop();
+                        } else {
+                          tts.speak(enhancedText);
+                        }
+                      }}
+                      disabled={!tts.isSupported}
+                      data-testid="button-speak-enhanced"
+                    >
+                      {tts.isSpeaking ? (
+                        <>
+                          <VolumeX className="h-4 w-4 mr-2" />
+                          Stop Audio
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-4 w-4 mr-2" />
+                          Speak Text
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 )}
               </div>
             )}
