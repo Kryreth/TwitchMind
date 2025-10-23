@@ -121,7 +121,7 @@ export default function Monitor() {
         description: error,
       });
     },
-    autoEnhance: false, // Disable auto-enhance, we'll trigger manually
+    autoEnhance: true, // Auto-enhance after 5 seconds of silence
     continuous: true,
   });
 
@@ -178,37 +178,6 @@ export default function Monitor() {
     } else {
       resetTranscript();
       startListening();
-    }
-  };
-  
-  const manuallyEnhanceSpeech = async () => {
-    if (!transcript.trim()) {
-      toast({
-        variant: "destructive",
-        title: "No Text",
-        description: "Please speak something first before processing",
-      });
-      return;
-    }
-    
-    try {
-      const response = await apiRequest("POST", "/api/voice/enhance", { text: transcript });
-      const result: { original: string; enhanced: string } = await response.json();
-      // The onEnhanced callback will handle the toast and TTS
-      if (aiVoiceEnabled && tts.isSupported) {
-        tts.speak(result.enhanced);
-      }
-      toast({
-        title: "Text Rephrased!",
-        description: result.enhanced,
-        duration: 5000,
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to rephrase text",
-      });
     }
   };
 
@@ -271,7 +240,7 @@ export default function Monitor() {
             <CardTitle>DachiStream Controls</CardTitle>
             <CardDescription>
               {voiceSupported 
-                ? "Voice-to-text with AI rephrasing - Pauses DachiStream while you speak"
+                ? "Continuous voice-to-text with automatic AI rephrasing after 5 seconds of silence"
                 : "Voice recognition not supported in this browser"}
             </CardDescription>
           </CardHeader>
@@ -298,29 +267,6 @@ export default function Monitor() {
                     </>
                   )}
                 </Button>
-
-                {transcript && !isListening && (
-                  <Button
-                    variant="default"
-                    size="default"
-                    onClick={manuallyEnhanceSpeech}
-                    disabled={isEnhancing || !transcript.trim()}
-                    data-testid="button-process-text"
-                    className="min-w-[140px]"
-                  >
-                    {isEnhancing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="h-4 w-4 mr-2" />
-                        Process Text
-                      </>
-                    )}
-                  </Button>
-                )}
 
                 <div className="flex items-center space-x-2">
                   <Switch
