@@ -190,6 +190,24 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
     recognition.onend = () => {
       console.log("Browser voice recognition ended");
       
+      // Check if we should trigger AI enhancement after 5 seconds
+      const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current;
+      if (accumulatedTranscriptRef.current.trim() && 
+          autoEnhance && 
+          shouldBeListeningRef.current && 
+          timeSinceLastSpeech < 2000) { // If speech was recent (within 2s), start 5s timer
+        
+        console.log("Starting 5-second silence timer after recognition ended");
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+        }
+        
+        silenceTimeoutRef.current = setTimeout(() => {
+          console.log(`5 seconds of silence detected - rephrasing:`, accumulatedTranscriptRef.current.trim());
+          enhanceSpeech(accumulatedTranscriptRef.current.trim());
+        }, 5000);
+      }
+      
       // Auto-restart if user still wants to be listening
       if (shouldBeListeningRef.current) {
         console.log("Auto-restarting voice recognition...");

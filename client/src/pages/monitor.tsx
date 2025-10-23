@@ -86,7 +86,6 @@ export default function Monitor() {
   const { toast } = useToast();
   const [selectedStream, setSelectedStream] = useState<VIPStream | null>(null);
   const [streamMuted, setStreamMuted] = useState(true);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
   const [dachipoolPaused, setDachipoolPaused] = useState(false);
 
   const tts = useTextToSpeech();
@@ -264,13 +263,14 @@ export default function Monitor() {
               <div className="flex items-center space-x-2">
                 <Switch
                   id="tts-enabled"
-                  checked={ttsEnabled}
-                  onCheckedChange={setTtsEnabled}
+                  checked={tts.settings.enabled}
+                  onCheckedChange={(enabled) => tts.updateSettings({ enabled })}
                   data-testid="toggle-tts"
+                  disabled={!tts.isSupported}
                 />
                 <Label htmlFor="tts-enabled" className="flex items-center gap-2 cursor-pointer">
-                  {ttsEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
-                  <span>TTS AI {ttsEnabled ? "On" : "Off"}</span>
+                  {tts.settings.enabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+                  <span>VIP Shoutout Audio {tts.settings.enabled ? "On" : "Off"}</span>
                 </Label>
               </div>
 
@@ -287,6 +287,101 @@ export default function Monitor() {
                 </Label>
               </div>
             </div>
+
+            {/* TTS Audio Settings */}
+            {tts.isSupported && tts.settings.enabled && (
+              <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <Volume2 className="h-4 w-4" />
+                  Audio Settings
+                </h4>
+                
+                {tts.voices.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Voice</Label>
+                    <select
+                      className="w-full p-2 rounded-md border bg-background text-sm"
+                      value={tts.settings.voice || ""}
+                      onChange={(e) => tts.updateSettings({ voice: e.target.value })}
+                      data-testid="select-tts-voice"
+                    >
+                      {tts.voices.map((voice) => (
+                        <option key={voice.name} value={voice.name}>
+                          {voice.name} ({voice.lang})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Volume: {Math.round(tts.settings.volume * 100)}%</Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={tts.settings.volume}
+                      onChange={(e) => tts.updateSettings({ volume: parseFloat(e.target.value) })}
+                      className="w-full"
+                      data-testid="slider-tts-volume"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Speed: {tts.settings.rate.toFixed(1)}x</Label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={tts.settings.rate}
+                      onChange={(e) => tts.updateSettings({ rate: parseFloat(e.target.value) })}
+                      className="w-full"
+                      data-testid="slider-tts-speed"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Pitch: {tts.settings.pitch.toFixed(1)}x</Label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={tts.settings.pitch}
+                      onChange={(e) => tts.updateSettings({ pitch: parseFloat(e.target.value) })}
+                      className="w-full"
+                      data-testid="slider-tts-pitch"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    tts.speak("Welcome to Stream Dachi! This is a test of the text to speech system.");
+                  }}
+                  disabled={tts.isSpeaking}
+                  className="w-full"
+                  data-testid="button-test-tts"
+                >
+                  {tts.isSpeaking ? (
+                    <>
+                      <Volume2 className="h-4 w-4 mr-2 animate-pulse" />
+                      Playing Test...
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="h-4 w-4 mr-2" />
+                      Test Audio
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
 
             {/* Voice Transcription Display */}
             {(transcript || enhancedText) && (
