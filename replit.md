@@ -45,7 +45,7 @@ Preferred communication style: Simple, everyday language.
 *   **AI Provider Switch**: Migrated all AI functionalities from OpenAI to GroqCloud, utilizing Groq SDK and models like Llama 3.3 70B Versatile.
 *   **Auto-Send to Chat**: AI responses can be automatically sent to Twitch chat.
 *   **Real-time Countdown**: Monitor page displays a live countdown to the next DachiStream cycle via WebSockets.
-*   **VIP Autocomplete**: Live autocomplete for VIP management search from active chatters.
+*   **VIP Autocomplete with Profile Pictures**: Improved autocomplete search with Twitch profile pictures, smooth typing experience, and smart Enter key selection.
 *   **Token Refresh System**: Automatic Twitch OAuth token renewal.
 *   **DachiStream Page Consolidation**: Dedicated `/dachistream` page for all stream interaction and AI behavior settings, including message selection, response modes, topic filters, general configuration, shoutouts, and TTS.
 *   **AI Personality System**: Introduces six personality options (Casual, Comedy, Quirky, Serious, Gaming, Professional) to customize AI response tone.
