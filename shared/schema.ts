@@ -131,6 +131,7 @@ export const settings = pgTable("settings", {
   dachiastreamSelectionStrategy: text("dachiastream_selection_strategy").notNull().default("most_active"), // most_active, random, new_chatter
   dachiastreamPaused: boolean("dachiastream_paused").notNull().default(false),
   dachiastreamAutoSendToChat: boolean("dachiastream_auto_send_to_chat").notNull().default(false),
+  dachiastreamCycleInterval: integer("dachiastream_cycle_interval").notNull().default(15), // seconds between cycles (5-60)
   
   // ElevenLabs Usage Tracking
   elevenlabsVoiceId: text("elevenlabs_voice_id"),
