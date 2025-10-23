@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
 import { useTextToSpeech } from "@/hooks/use-text-to-speech";
+import { usePuterTTS } from "@/hooks/use-puter-tts";
 import type { ChatMessage, VoiceAiResponse } from "@shared/schema";
 
 // Voice AI Response History Component
@@ -176,10 +177,11 @@ export default function Monitor() {
   const [selectedStream, setSelectedStream] = useState<VIPStream | null>(null);
   const [streamMuted, setStreamMuted] = useState(true);
   const [dachipoolPaused, setDachipoolPaused] = useState(false);
-  const [aiVoiceEnabled, setAiVoiceEnabled] = useState(false); // Separate toggle for AI voice TTS
-  const [vipShoutoutAudioEnabled, setVipShoutoutAudioEnabled] = useState(false); // For VIP shoutouts only
+  const [aiVoiceEnabled, setAiVoiceEnabled] = useState(false); // Separate toggle for AI voice TTS (Puter)
+  const [vipShoutoutAudioEnabled, setVipShoutoutAudioEnabled] = useState(false); // For VIP shoutouts only (Web Speech API)
 
-  const tts = useTextToSpeech();
+  const tts = useTextToSpeech(); // For VIP shoutouts
+  const puterTTS = usePuterTTS(); // For AI voice responses - high quality Neural/Generative
 
   const {
     isListening,
@@ -198,9 +200,10 @@ export default function Monitor() {
         duration: 5000,
       });
       
-      // Auto-speak if AI voice is enabled
-      if (aiVoiceEnabled && tts.isSupported) {
-        tts.speak(enhanced);
+      // Auto-speak if AI voice is enabled (using Puter TTS for high quality)
+      if (aiVoiceEnabled && puterTTS.isSupported) {
+        console.log(`[Puter TTS] Speaking rephrased text with ${puterTTS.settings.engine} engine`);
+        puterTTS.speak(enhanced);
       }
     },
     onError: (error) => {
@@ -378,11 +381,11 @@ export default function Monitor() {
                     checked={aiVoiceEnabled}
                     onCheckedChange={setAiVoiceEnabled}
                     data-testid="toggle-ai-voice"
-                    disabled={!tts.isSupported}
+                    disabled={!puterTTS.isSupported}
                   />
                   <Label htmlFor="ai-voice-enabled" className="flex items-center gap-2 cursor-pointer">
                     {aiVoiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
-                    <span className="font-medium">AI Voice (Speak Rephrased Text)</span>
+                    <span className="font-medium">AI Voice (Puter Neural TTS)</span>
                   </Label>
                 </div>
 
@@ -396,11 +399,77 @@ export default function Monitor() {
                   />
                   <Label htmlFor="vip-shoutout-audio" className="flex items-center gap-2 cursor-pointer">
                     {vipShoutoutAudioEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
-                    <span className="font-medium">VIP Shoutout Audio</span>
+                    <span className="font-medium">VIP Shoutout Audio (Web Speech)</span>
                   </Label>
                 </div>
               </div>
             </div>
+
+            {/* Puter TTS Engine Settings */}
+            {puterTTS.isSupported && aiVoiceEnabled && (
+              <div className="p-4 border rounded-lg bg-primary/5 space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2 text-primary">
+                  <Zap className="h-4 w-4" />
+                  AI Voice Quality (Puter.js)
+                </h4>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Voice Engine</Label>
+                  <select
+                    className="w-full p-2 rounded-md border bg-background text-sm"
+                    value={puterTTS.settings.engine}
+                    onChange={(e) => puterTTS.updateSettings({ engine: e.target.value as "standard" | "neural" | "generative" })}
+                    data-testid="select-puter-engine"
+                  >
+                    <option value="standard">Standard (Good quality, fast)</option>
+                    <option value="neural">Neural (High quality, natural)</option>
+                    <option value="generative">Generative (Best quality, most human-like)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {puterTTS.settings.engine === "generative" && "🔥 Using the most advanced AI voice technology"}
+                    {puterTTS.settings.engine === "neural" && "⚡ Using neural network-based synthesis"}
+                    {puterTTS.settings.engine === "standard" && "✓ Using standard concatenative synthesis"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Volume: {Math.round(puterTTS.settings.volume * 100)}%</Label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={puterTTS.settings.volume}
+                    onChange={(e) => puterTTS.updateSettings({ volume: parseFloat(e.target.value) })}
+                    className="w-full"
+                    data-testid="slider-puter-volume"
+                  />
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    puterTTS.speak("Welcome to StreamDachi! This is a test of the Puter text-to-speech system with " + puterTTS.settings.engine + " quality.");
+                  }}
+                  disabled={puterTTS.isSpeaking}
+                  className="w-full"
+                  data-testid="button-test-puter-tts"
+                >
+                  {puterTTS.isSpeaking ? (
+                    <>
+                      <Volume2 className="h-4 w-4 mr-2 animate-pulse" />
+                      Playing Test...
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="h-4 w-4 mr-2" />
+                      Test Puter TTS
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
 
             {/* TTS Audio Settings */}
             {tts.isSupported && (aiVoiceEnabled || vipShoutoutAudioEnabled) && (
