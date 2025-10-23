@@ -135,6 +135,13 @@ export const settings = pgTable("settings", {
   audioCooldownBetweenReplies: integer("audio_cooldown_between_replies").notNull().default(5), // seconds
   audioMaxVoiceLength: integer("audio_max_voice_length").notNull().default(500), // characters
   
+  // Web Speech API TTS Settings
+  ttsEnabled: boolean("tts_enabled").notNull().default(false),
+  ttsVoice: text("tts_voice"), // Voice name from speechSynthesis.getVoices()
+  ttsPitch: integer("tts_pitch").notNull().default(10), // 5-20 (0.5-2.0), divide by 10
+  ttsRate: integer("tts_rate").notNull().default(10), // 5-20 (0.5-2.0), divide by 10
+  ttsVolume: integer("tts_volume").notNull().default(10), // 0-10 (0.0-1.0), divide by 10
+  
   // Topic Filters
   topicAllowlist: jsonb("topic_allowlist").$type<string[]>().default(sql`'["gaming", "anime", "chatting"]'::jsonb`),
   topicBlocklist: jsonb("topic_blocklist").$type<string[]>().default(sql`'["politics", "religion"]'::jsonb`),

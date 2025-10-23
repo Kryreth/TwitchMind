@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useTextToSpeech } from "@/hooks/use-text-to-speech";
+import { Volume2 } from "lucide-react";
 
 interface Settings {
   id: string;
@@ -29,10 +31,16 @@ interface Settings {
   dachipoolShoutoutCooldownHours: number;
   dachipoolElevenlabsEnabled: boolean;
   autoShoutoutsEnabled: boolean;
+  ttsEnabled: boolean;
+  ttsVoice: string | null;
+  ttsPitch: number;
+  ttsRate: number;
+  ttsVolume: number;
 }
 
 export default function DachiStream() {
   const { toast } = useToast();
+  const tts = useTextToSpeech();
   
   // DachiStream settings
   const [topicAllowlist, setTopicAllowlist] = useState<string[]>(["gaming", "anime", "chatting"]);
@@ -51,6 +59,13 @@ export default function DachiStream() {
   const [dachipoolShoutoutCooldownHours, setDachipoolShoutoutCooldownHours] = useState([24]);
   const [dachipoolElevenlabsEnabled, setDachipoolElevenlabsEnabled] = useState(false);
   const [autoShoutoutsEnabled, setAutoShoutoutsEnabled] = useState(true);
+  
+  // TTS settings
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [ttsVoice, setTtsVoice] = useState<string | null>(null);
+  const [ttsPitch, setTtsPitch] = useState([10]); // 5-20, divide by 10 for 0.5-2.0
+  const [ttsRate, setTtsRate] = useState([10]); // 5-20, divide by 10 for 0.5-2.0
+  const [ttsVolume, setTtsVolume] = useState([10]); // 0-10, divide by 10 for 0.0-1.0
 
   const { data: settings } = useQuery<Settings[]>({
     queryKey: ["/api/settings"],
@@ -74,6 +89,12 @@ export default function DachiStream() {
       setDachipoolShoutoutCooldownHours([setting.dachipoolShoutoutCooldownHours || 24]);
       setDachipoolElevenlabsEnabled(setting.dachipoolElevenlabsEnabled ?? false);
       setAutoShoutoutsEnabled(setting.autoShoutoutsEnabled ?? true);
+      
+      setTtsEnabled(setting.ttsEnabled ?? false);
+      setTtsVoice(setting.ttsVoice || null);
+      setTtsPitch([setting.ttsPitch || 10]);
+      setTtsRate([setting.ttsRate || 10]);
+      setTtsVolume([setting.ttsVolume || 10]);
     }
   }, [settings]);
 
@@ -116,6 +137,26 @@ export default function DachiStream() {
       dachipoolShoutoutCooldownHours: dachipoolShoutoutCooldownHours[0],
       dachipoolElevenlabsEnabled,
       autoShoutoutsEnabled,
+      ttsEnabled,
+      ttsVoice,
+      ttsPitch: ttsPitch[0],
+      ttsRate: ttsRate[0],
+      ttsVolume: ttsVolume[0],
+    });
+  };
+
+  const handleTestTTS = () => {
+    tts.updateSettings({
+      enabled: true,
+      voice: ttsVoice,
+      pitch: ttsPitch[0] / 10,
+      rate: ttsRate[0] / 10,
+      volume: ttsVolume[0] / 10,
+    });
+    tts.speak("Welcome to Stream Dachi! This is a test of the text to speech system.");
+    toast({
+      title: "Testing TTS",
+      description: "Playing test message...",
     });
   };
 
@@ -401,6 +442,123 @@ export default function DachiStream() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-web-speech-tts">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Web Speech API TTS (Free)</CardTitle>
+          <CardDescription>Browser-native text-to-speech with no API costs</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="tts-enabled">Enable TTS</Label>
+              <p className="text-xs text-muted-foreground">
+                Use browser-native voice synthesis for shoutouts
+              </p>
+            </div>
+            <Switch
+              id="tts-enabled"
+              checked={ttsEnabled}
+              onCheckedChange={setTtsEnabled}
+              data-testid="switch-tts-enabled"
+            />
+          </div>
+
+          {ttsEnabled && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="tts-voice">Voice</Label>
+                <Select value={ttsVoice || ""} onValueChange={setTtsVoice}>
+                  <SelectTrigger id="tts-voice" data-testid="select-tts-voice">
+                    <SelectValue placeholder="Select a voice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tts.voices.map((voice) => (
+                      <SelectItem key={voice.name} value={voice.name}>
+                        {voice.name} ({voice.lang})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Available voices from your operating system
+                </p>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label>Pitch</Label>
+                    <span className="text-sm text-muted-foreground" data-testid="text-pitch-value">
+                      {(ttsPitch[0] / 10).toFixed(1)}x
+                    </span>
+                  </div>
+                  <Slider
+                    value={ttsPitch}
+                    onValueChange={setTtsPitch}
+                    min={5}
+                    max={20}
+                    step={1}
+                    data-testid="slider-tts-pitch"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label>Speed</Label>
+                    <span className="text-sm text-muted-foreground" data-testid="text-rate-value">
+                      {(ttsRate[0] / 10).toFixed(1)}x
+                    </span>
+                  </div>
+                  <Slider
+                    value={ttsRate}
+                    onValueChange={setTtsRate}
+                    min={5}
+                    max={20}
+                    step={1}
+                    data-testid="slider-tts-rate"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label>Volume</Label>
+                    <span className="text-sm text-muted-foreground" data-testid="text-volume-value">
+                      {(ttsVolume[0] * 10)}%
+                    </span>
+                  </div>
+                  <Slider
+                    value={ttsVolume}
+                    onValueChange={setTtsVolume}
+                    min={0}
+                    max={10}
+                    step={1}
+                    data-testid="slider-tts-volume"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={handleTestTTS}
+                  disabled={tts.isSpeaking}
+                  data-testid="button-test-tts"
+                >
+                  <Volume2 className="w-4 h-4 mr-2" />
+                  {tts.isSpeaking ? "Playing..." : "Test Voice"}
+                </Button>
+              </div>
+
+              <div className="p-4 bg-muted/50 rounded-md border border-border">
+                <p className="text-sm text-foreground">
+                  Web Speech API uses your operating system's built-in voices. Quality and selection varies by platform. Works best in Chrome and Edge browsers.
+                </p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
