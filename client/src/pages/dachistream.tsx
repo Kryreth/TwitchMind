@@ -106,7 +106,7 @@ export default function DachiStream() {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       toast({
         title: "Settings updated",
-        description: "DachiStream settings have been saved successfully.",
+        description: "StreamDachi AI settings have been saved successfully.",
       });
     },
     onError: (error) => {
@@ -149,7 +149,7 @@ export default function DachiStream() {
       rate: ttsRate[0] / 10,
       volume: ttsVolume[0] / 10,
     });
-    tts.speak("Welcome to Stream Dachi! This is a test of the text to speech system.");
+    tts.speak("Welcome to StreamDachi! This is a test of the text to speech system.");
     toast({
       title: "Testing TTS",
       description: "Playing test message...",
@@ -159,9 +159,9 @@ export default function DachiStream() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">DachiStream</h1>
+        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">StreamDachi AI</h1>
         <p className="text-muted-foreground mt-2">
-          Configure how the AI interacts with your Twitch chat stream
+          Configure how StreamDachi AI interacts with your Twitch chat stream
         </p>
       </div>
 
@@ -190,7 +190,7 @@ export default function DachiStream() {
 
           <div className="p-4 bg-muted rounded-md">
             <p className="text-sm text-foreground">
-              DachiStream operates on a 15-second cycle, analyzing chat activity and selecting messages based on your chosen strategy. The AI will engage naturally while respecting cooldowns and topic filters.
+              StreamDachi AI operates on a configurable cycle, analyzing chat activity and selecting messages based on your chosen strategy. The AI will engage naturally while respecting cooldowns and topic filters.
             </p>
           </div>
         </CardContent>
@@ -276,7 +276,7 @@ export default function DachiStream() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="dachipool-enabled">Enable DachiPool</Label>
+                  <Label htmlFor="dachipool-enabled">Enable StreamDachi AI</Label>
                   <p className="text-xs text-muted-foreground">
                     Activate enhanced AI features
                   </p>
@@ -349,7 +349,7 @@ export default function DachiStream() {
                   data-testid="slider-cycle-interval"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Seconds between DachiStream message collection cycles
+                  Seconds between StreamDachi AI message collection cycles
                 </p>
               </div>
 

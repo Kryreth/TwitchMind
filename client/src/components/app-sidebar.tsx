@@ -39,7 +39,7 @@ const menuItems = [
     icon: CpuChipIcon,
   },
   {
-    title: "DachiStream",
+    title: "StreamDachi AI",
     url: "/dachistream",
     icon: BoltIcon,
   },
@@ -71,7 +71,7 @@ export function AppSidebar() {
             <SiTwitch className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-sidebar-foreground">Twitch AI</h1>
+            <h1 className="text-lg font-bold text-sidebar-foreground">StreamDachi</h1>
             <p className="text-xs text-muted-foreground">Dashboard</p>
           </div>
         </div>

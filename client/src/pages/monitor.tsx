@@ -230,14 +230,14 @@ export default function Monitor() {
     <div className="h-full overflow-auto" data-testid="page-monitor">
       <div className="container mx-auto p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">DachiStream Monitor</h1>
-          <p className="text-muted-foreground">Real-time debugging and monitoring</p>
+          <h1 className="text-3xl font-bold">StreamDachi Monitor</h1>
+          <p className="text-muted-foreground">Real-time AI monitoring and voice controls</p>
         </div>
 
         {/* Voice & DachiPool Controls */}
         <Card data-testid="card-voice-controls">
           <CardHeader>
-            <CardTitle>DachiStream Controls</CardTitle>
+            <CardTitle>StreamDachi Controls</CardTitle>
             <CardDescription>
               {voiceSupported 
                 ? "Continuous voice-to-text with automatic AI rephrasing after 5 seconds of silence"
@@ -277,7 +277,7 @@ export default function Monitor() {
                   />
                   <Label htmlFor="dachipool-pause" className="flex items-center gap-2 cursor-pointer">
                     {dachipoolPaused ? <Pause className="h-4 w-4 text-muted-foreground" /> : <Play className="h-4 w-4 text-primary" />}
-                    <span>DachiPool {dachipoolPaused ? "Paused" : "Active"}</span>
+                    <span>StreamDachi AI {dachipoolPaused ? "Paused" : "Active"}</span>
                   </Label>
                 </div>
               </div>
