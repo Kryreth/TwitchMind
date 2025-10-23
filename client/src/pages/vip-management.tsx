@@ -33,7 +33,7 @@ export default function VIPManagement() {
   });
 
   const { data: suggestions = [] } = useQuery<TwitchSearchUser[]>({
-    queryKey: ["/api/twitch/search-users", { query: searchQuery }],
+    queryKey: [`/api/twitch/search-users?query=${searchQuery}`],
     enabled: searchQuery.length > 1 && showSuggestions,
   });
 

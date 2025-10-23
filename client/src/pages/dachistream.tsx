@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
 interface Settings {
-  id: number;
+  id: string;
   twitchChannel: string;
   autoModeration: boolean;
   sentimentThreshold: number;

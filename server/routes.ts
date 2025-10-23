@@ -463,19 +463,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dachistream/status", async (req, res) => {
-    try {
-      // This will be handled by the DachiStream service instance in index.ts
-      res.json({
-        messageCount: 0,
-        userCount: 0,
-        isPaused: false,
-      });
-    } catch (error) {
-      console.error("Error getting DachiStream status:", error);
-      res.status(500).json({ error: "Failed to get DachiStream status" });
-    }
-  });
 
   // ElevenLabs TTS - imported from index.ts where service is initialized
   app.post("/api/tts/generate", async (req, res) => {
