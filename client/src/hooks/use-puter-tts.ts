@@ -21,6 +21,49 @@ declare global {
   }
 }
 
+// AWS Polly voices available through Puter.js
+export interface PuterVoice {
+  id: string;
+  name: string;
+  gender: "Male" | "Female";
+  language: string;
+  region: string;
+}
+
+export const PUTER_VOICES: PuterVoice[] = [
+  // US English - Male
+  { id: "Matthew", name: "Matthew", gender: "Male", language: "en-US", region: "US" },
+  { id: "Joey", name: "Joey", gender: "Male", language: "en-US", region: "US" },
+  { id: "Justin", name: "Justin", gender: "Male", language: "en-US", region: "US" },
+  { id: "Kevin", name: "Kevin", gender: "Male", language: "en-US", region: "US" },
+  { id: "Stephen", name: "Stephen", gender: "Male", language: "en-US", region: "US" },
+  
+  // US English - Female
+  { id: "Joanna", name: "Joanna", gender: "Female", language: "en-US", region: "US" },
+  { id: "Kendra", name: "Kendra", gender: "Female", language: "en-US", region: "US" },
+  { id: "Kimberly", name: "Kimberly", gender: "Female", language: "en-US", region: "US" },
+  { id: "Salli", name: "Salli", gender: "Female", language: "en-US", region: "US" },
+  { id: "Ivy", name: "Ivy", gender: "Female", language: "en-US", region: "US" },
+  { id: "Ruth", name: "Ruth", gender: "Female", language: "en-US", region: "US" },
+  
+  // British English - Male
+  { id: "Brian", name: "Brian", gender: "Male", language: "en-GB", region: "UK" },
+  
+  // British English - Female
+  { id: "Emma", name: "Emma", gender: "Female", language: "en-GB", region: "UK" },
+  { id: "Amy", name: "Amy", gender: "Female", language: "en-GB", region: "UK" },
+  
+  // Australian English - Male
+  { id: "Russell", name: "Russell", gender: "Male", language: "en-AU", region: "Australia" },
+  
+  // Australian English - Female
+  { id: "Nicole", name: "Nicole", gender: "Female", language: "en-AU", region: "Australia" },
+  
+  // Indian English - Female
+  { id: "Aditi", name: "Aditi", gender: "Female", language: "en-IN", region: "India" },
+  { id: "Raveena", name: "Raveena", gender: "Female", language: "en-IN", region: "India" },
+];
+
 export interface PuterTTSSettings {
   enabled: boolean;
   voice: string;
@@ -140,5 +183,6 @@ export function usePuterTTS() {
     speak,
     stop,
     updateSettings,
+    voices: PUTER_VOICES,
   };
 }
