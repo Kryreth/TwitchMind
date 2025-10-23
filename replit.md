@@ -53,6 +53,7 @@ Preferred communication style: Simple, everyday language.
 *   **AI Learning Engine**: Periodic analysis (every 10 minutes) of user chat patterns to generate personality summaries for personalized AI responses.
 *   **Raid Management System**: Dedicated `/raid-management` page with two-way raid functionality. View incoming raids with clickable Twitch profile links. Send outgoing raids with VIPs shown first, supports any Twitch channel via search, and executes raid commands through Twitch Helix API.
 *   **VIP Shoutout Browser Source**: Toggleable browser source feature generating a static, private URL for OBS integration. Displays VIP shoutouts in real-time via WebSocket connection with animated gradient design.
+*   **Voice Rephrasing System**: Continuous voice-to-text with AI rephrasing on the Monitor page. Uses Web Speech API for browser-based transcription and llama-3.1-8b-instant (fastest Groq model) for ultra-fast rephrasing. After 5 seconds of silence, AI automatically rephrases spoken text (same meaning, different words) removing stutters and filler words. Auto-pauses DachiStream while speaking to prevent interruptions.
 
 ## External Dependencies
 
