@@ -21,6 +21,7 @@ interface Settings {
   streamerVoiceOnlyMode: boolean;
   dachiastreamSelectionStrategy: string;
   dachiastreamAutoSendToChat: boolean;
+  dachiastreamCycleInterval: number;
   dachipoolEnabled: boolean;
   dachipoolMaxChars: number;
   dachipoolEnergy: string;
@@ -40,6 +41,7 @@ export default function DachiStream() {
   const [streamerVoiceOnlyMode, setStreamerVoiceOnlyMode] = useState(false);
   const [dachiastreamSelectionStrategy, setDachiastreamSelectionStrategy] = useState("most_active");
   const [dachiastreamAutoSendToChat, setDachiastreamAutoSendToChat] = useState(false);
+  const [dachiastreamCycleInterval, setDachiastreamCycleInterval] = useState([15]);
   
   // DachiPool settings
   const [dachipoolEnabled, setDachipoolEnabled] = useState(true);
@@ -63,6 +65,7 @@ export default function DachiStream() {
       setStreamerVoiceOnlyMode(setting.streamerVoiceOnlyMode ?? false);
       setDachiastreamSelectionStrategy(setting.dachiastreamSelectionStrategy || "most_active");
       setDachiastreamAutoSendToChat(setting.dachiastreamAutoSendToChat ?? false);
+      setDachiastreamCycleInterval([setting.dachiastreamCycleInterval || 15]);
       
       setDachipoolEnabled(setting.dachipoolEnabled ?? true);
       setDachipoolMaxChars([setting.dachipoolMaxChars || 1000]);
@@ -105,6 +108,7 @@ export default function DachiStream() {
       streamerVoiceOnlyMode,
       dachiastreamSelectionStrategy,
       dachiastreamAutoSendToChat,
+      dachiastreamCycleInterval: dachiastreamCycleInterval[0],
       dachipoolEnabled,
       dachipoolMaxChars: dachipoolMaxChars[0],
       dachipoolEnergy,
@@ -292,6 +296,26 @@ export default function DachiStream() {
             </div>
 
             <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Cycle Interval</Label>
+                  <span className="text-sm text-muted-foreground" data-testid="text-cycle-interval-value">
+                    {dachiastreamCycleInterval[0]}s
+                  </span>
+                </div>
+                <Slider
+                  value={dachiastreamCycleInterval}
+                  onValueChange={setDachiastreamCycleInterval}
+                  min={5}
+                  max={60}
+                  step={5}
+                  data-testid="slider-cycle-interval"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Seconds between DachiStream message collection cycles
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <Label>Max Characters</Label>
