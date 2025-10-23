@@ -7,14 +7,103 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Activity, MessageSquare, Clock, Zap, Mic, MicOff, Volume2, VolumeX, Play, Pause, Rocket, ExternalLink, Users, Loader2 } from "lucide-react";
+import { Activity, MessageSquare, Clock, Zap, Mic, MicOff, Volume2, VolumeX, Play, Pause, Rocket, ExternalLink, Users, Loader2, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
 import { useTextToSpeech } from "@/hooks/use-text-to-speech";
-import type { ChatMessage } from "@shared/schema";
+import type { ChatMessage, VoiceAiResponse } from "@shared/schema";
+
+// Voice AI Response History Component
+function VoiceResponseHistory() {
+  const { toast } = useToast();
+  const { data: responses = [], isLoading } = useQuery<VoiceAiResponse[]>({
+    queryKey: ["/api/voice/responses"],
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: "Text copied to clipboard",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading history...
+      </div>
+    );
+  }
+
+  if (responses.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No voice responses yet. Start speaking to see your AI-rephrased messages here!
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[400px]">
+      <div className="space-y-4">
+        {responses.map((response) => (
+          <div
+            key={response.id}
+            className="p-4 rounded-lg border bg-card hover-elevate"
+            data-testid={`voice-response-${response.id}`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {format(new Date(response.timestamp), "MMM d, h:mm:ss a")}
+              </span>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs text-muted-foreground">Original:</Label>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2"
+                    onClick={() => copyToClipboard(response.originalText)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-sm bg-muted/50 p-2 rounded border">{response.originalText}</p>
+              </div>
+              
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs text-primary">AI Rephrased:</Label>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2"
+                    onClick={() => copyToClipboard(response.rephrasedText)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-sm bg-primary/10 p-2 rounded border border-primary/20 font-medium">
+                  {response.rephrasedText}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
 
 type DachiStreamStatus = "idle" | "collecting" | "processing" | "selecting_message" | "building_context" | "waiting_for_ai" | "disabled" | "paused";
 
@@ -468,6 +557,22 @@ export default function Monitor() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Voice AI Response History */}
+        <Card data-testid="card-voice-history">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Voice AI Response History
+            </CardTitle>
+            <CardDescription>
+              Recent voice transcriptions and AI rephrasing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VoiceResponseHistory />
           </CardContent>
         </Card>
 
