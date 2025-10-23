@@ -66,11 +66,11 @@ export const aiCommands = pgTable("ai_commands", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Streamer Speaks Table - History of polished streamer messages
-export const streamerSpeaks = pgTable("streamer_speaks", {
+// Voice AI Responses Table - History of voice transcriptions and AI rephrasing
+export const voiceAiResponses = pgTable("voice_ai_responses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  originalText: text("original_text").notNull(), // Raw transcription
-  polishedText: text("polished_text").notNull(), // GPT-cleaned version
+  originalText: text("original_text").notNull(), // Raw voice transcription
+  rephrasedText: text("rephrased_text").notNull(), // AI-rephrased version
   wasSpoken: boolean("was_spoken").notNull().default(false), // Was it sent to TTS
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
@@ -202,7 +202,7 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   updatedAt: true,
 });
 
-export const insertStreamerSpeaksSchema = createInsertSchema(streamerSpeaks).omit({
+export const insertVoiceAiResponseSchema = createInsertSchema(voiceAiResponses).omit({
   id: true,
   timestamp: true,
 });
@@ -237,8 +237,8 @@ export type InsertAiCommand = z.infer<typeof insertAiCommandSchema>;
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 
-export type StreamerSpeaks = typeof streamerSpeaks.$inferSelect;
-export type InsertStreamerSpeaks = z.infer<typeof insertStreamerSpeaksSchema>;
+export type VoiceAiResponse = typeof voiceAiResponses.$inferSelect;
+export type InsertVoiceAiResponse = z.infer<typeof insertVoiceAiResponseSchema>;
 
 export type AuthenticatedUser = typeof authenticatedUsers.$inferSelect;
 export type InsertAuthenticatedUser = z.infer<typeof insertAuthenticatedUserSchema>;
