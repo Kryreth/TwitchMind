@@ -87,6 +87,8 @@ export default function Monitor() {
   const [selectedStream, setSelectedStream] = useState<VIPStream | null>(null);
   const [streamMuted, setStreamMuted] = useState(true);
   const [dachipoolPaused, setDachipoolPaused] = useState(false);
+  const [aiVoiceEnabled, setAiVoiceEnabled] = useState(false); // Separate toggle for AI voice TTS
+  const [vipShoutoutAudioEnabled, setVipShoutoutAudioEnabled] = useState(false); // For VIP shoutouts only
 
   const tts = useTextToSpeech();
 
@@ -106,6 +108,11 @@ export default function Monitor() {
         description: `"${enhanced}"`,
         duration: 5000,
       });
+      
+      // Auto-speak if AI voice is enabled
+      if (aiVoiceEnabled && tts.isSupported) {
+        tts.speak(enhanced);
+      }
     },
     onError: (error) => {
       toast({
@@ -114,7 +121,7 @@ export default function Monitor() {
         description: error,
       });
     },
-    autoEnhance: true,
+    autoEnhance: false, // Disable auto-enhance, we'll trigger manually
     continuous: true,
   });
 
@@ -171,6 +178,37 @@ export default function Monitor() {
     } else {
       resetTranscript();
       startListening();
+    }
+  };
+  
+  const manuallyEnhanceSpeech = async () => {
+    if (!transcript.trim()) {
+      toast({
+        variant: "destructive",
+        title: "No Text",
+        description: "Please speak something first before processing",
+      });
+      return;
+    }
+    
+    try {
+      const response = await apiRequest("POST", "/api/voice/enhance", { text: transcript });
+      const result: { original: string; enhanced: string } = await response.json();
+      // The onEnhanced callback will handle the toast and TTS
+      if (aiVoiceEnabled && tts.isSupported) {
+        tts.speak(result.enhanced);
+      }
+      toast({
+        title: "Text Rephrased!",
+        description: result.enhanced,
+        duration: 5000,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to rephrase text",
+      });
     }
   };
 
@@ -238,62 +276,106 @@ export default function Monitor() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-6">
-              <Button
-                variant={isListening ? "default" : "outline"}
-                size="default"
-                onClick={toggleMic}
-                disabled={!voiceSupported}
-                data-testid="button-toggle-mic"
-                className="min-w-[140px]"
-              >
-                {isListening ? (
-                  <>
-                    <Mic className="h-4 w-4 mr-2 animate-pulse" />
-                    Listening...
-                  </>
-                ) : (
-                  <>
-                    <MicOff className="h-4 w-4 mr-2" />
-                    Start Speaking
-                  </>
-                )}
-              </Button>
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant={isListening ? "default" : "outline"}
+                  size="default"
+                  onClick={toggleMic}
+                  disabled={!voiceSupported}
+                  data-testid="button-toggle-mic"
+                  className="min-w-[140px]"
+                >
+                  {isListening ? (
+                    <>
+                      <Mic className="h-4 w-4 mr-2 animate-pulse" />
+                      Listening...
+                    </>
+                  ) : (
+                    <>
+                      <MicOff className="h-4 w-4 mr-2" />
+                      Start Speaking
+                    </>
+                  )}
+                </Button>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="tts-enabled"
-                  checked={tts.settings.enabled}
-                  onCheckedChange={(enabled) => tts.updateSettings({ enabled })}
-                  data-testid="toggle-tts"
-                  disabled={!tts.isSupported}
-                />
-                <Label htmlFor="tts-enabled" className="flex items-center gap-2 cursor-pointer">
-                  {tts.settings.enabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
-                  <span>VIP Shoutout Audio {tts.settings.enabled ? "On" : "Off"}</span>
-                </Label>
+                {transcript && !isListening && (
+                  <Button
+                    variant="default"
+                    size="default"
+                    onClick={manuallyEnhanceSpeech}
+                    disabled={isEnhancing || !transcript.trim()}
+                    data-testid="button-process-text"
+                    className="min-w-[140px]"
+                  >
+                    {isEnhancing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Process Text
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="dachipool-pause"
+                    checked={dachipoolPaused}
+                    onCheckedChange={setDachipoolPaused}
+                    data-testid="toggle-dachipool"
+                  />
+                  <Label htmlFor="dachipool-pause" className="flex items-center gap-2 cursor-pointer">
+                    {dachipoolPaused ? <Pause className="h-4 w-4 text-muted-foreground" /> : <Play className="h-4 w-4 text-primary" />}
+                    <span>DachiPool {dachipoolPaused ? "Paused" : "Active"}</span>
+                  </Label>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="dachipool-pause"
-                  checked={dachipoolPaused}
-                  onCheckedChange={setDachipoolPaused}
-                  data-testid="toggle-dachipool"
-                />
-                <Label htmlFor="dachipool-pause" className="flex items-center gap-2 cursor-pointer">
-                  {dachipoolPaused ? <Pause className="h-4 w-4 text-muted-foreground" /> : <Play className="h-4 w-4 text-primary" />}
-                  <span>DachiPool {dachipoolPaused ? "Paused" : "Active"}</span>
-                </Label>
+              <div className="flex flex-wrap gap-4 pt-2 border-t">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="ai-voice-enabled"
+                    checked={aiVoiceEnabled}
+                    onCheckedChange={setAiVoiceEnabled}
+                    data-testid="toggle-ai-voice"
+                    disabled={!tts.isSupported}
+                  />
+                  <Label htmlFor="ai-voice-enabled" className="flex items-center gap-2 cursor-pointer">
+                    {aiVoiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+                    <span className="font-medium">AI Voice (Speak Rephrased Text)</span>
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="vip-shoutout-audio"
+                    checked={vipShoutoutAudioEnabled}
+                    onCheckedChange={setVipShoutoutAudioEnabled}
+                    data-testid="toggle-vip-shoutout-audio"
+                    disabled={!tts.isSupported}
+                  />
+                  <Label htmlFor="vip-shoutout-audio" className="flex items-center gap-2 cursor-pointer">
+                    {vipShoutoutAudioEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+                    <span className="font-medium">VIP Shoutout Audio</span>
+                  </Label>
+                </div>
               </div>
             </div>
 
             {/* TTS Audio Settings */}
-            {tts.isSupported && tts.settings.enabled && (
+            {tts.isSupported && (aiVoiceEnabled || vipShoutoutAudioEnabled) && (
               <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Volume2 className="h-4 w-4" />
                   Audio Settings
+                  {aiVoiceEnabled && vipShoutoutAudioEnabled && (
+                    <span className="text-xs text-muted-foreground font-normal">(Shared for both)</span>
+                  )}
                 </h4>
                 
                 {tts.voices.length > 0 && (
@@ -415,7 +497,7 @@ export default function Monitor() {
                   </div>
                 )}
                 {enhancedText && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <Button
                       size="sm"
                       variant="outline"
@@ -430,31 +512,12 @@ export default function Monitor() {
                     >
                       Copy Text
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        if (tts.isSpeaking) {
-                          tts.stop();
-                        } else {
-                          tts.speak(enhancedText);
-                        }
-                      }}
-                      disabled={!tts.isSupported}
-                      data-testid="button-speak-enhanced"
-                    >
-                      {tts.isSpeaking ? (
-                        <>
-                          <VolumeX className="h-4 w-4 mr-2" />
-                          Stop Audio
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="h-4 w-4 mr-2" />
-                          Speak Text
-                        </>
-                      )}
-                    </Button>
+                    {aiVoiceEnabled && tts.isSupported && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Volume2 className="h-3 w-3" />
+                        Auto-spoken aloud
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
