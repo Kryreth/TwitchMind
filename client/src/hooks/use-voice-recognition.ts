@@ -128,8 +128,11 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
       }
 
       // Wait 5 seconds of silence before sending to AI
+      // Only set timeout if we have any transcript
       if (currentTranscript.trim() && autoEnhance) {
+        console.log("Setting 5-second timeout for AI rephrasing:", currentTranscript);
         timeoutRef.current = setTimeout(() => {
+          console.log("5 seconds passed - calling AI to rephrase:", currentTranscript);
           enhanceSpeech(currentTranscript.trim());
         }, 5000);
       }

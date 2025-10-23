@@ -339,6 +339,65 @@ export class TwitchOAuthService {
 
     return allStreams;
   }
+
+  /**
+   * Gets the latest clip for a Twitch user
+   */
+  async getLatestClip(username: string): Promise<{ url: string; title: string } | null> {
+    try {
+      const appToken = await this.getAppAccessToken();
+
+      // First, get the user ID from username
+      const userResponse = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+        headers: {
+          'Authorization': `Bearer ${appToken}`,
+          'Client-Id': TWITCH_CLIENT_ID,
+        },
+      });
+
+      if (!userResponse.ok) {
+        console.error('Failed to fetch user for clips:', await userResponse.text());
+        return null;
+      }
+
+      const userData = await userResponse.json();
+      if (!userData.data || userData.data.length === 0) {
+        return null;
+      }
+
+      const broadcasterId = userData.data[0].id;
+
+      // Now get the clips for this broadcaster
+      const clipsResponse = await fetch(
+        `https://api.twitch.tv/helix/clips?broadcaster_id=${broadcasterId}&first=1`,
+        {
+          headers: {
+            'Authorization': `Bearer ${appToken}`,
+            'Client-Id': TWITCH_CLIENT_ID,
+          },
+        }
+      );
+
+      if (!clipsResponse.ok) {
+        console.error('Failed to fetch clips:', await clipsResponse.text());
+        return null;
+      }
+
+      const clipsData = await clipsResponse.json();
+      if (!clipsData.data || clipsData.data.length === 0) {
+        return null;
+      }
+
+      const clip = clipsData.data[0];
+      return {
+        url: clip.url,
+        title: clip.title,
+      };
+    } catch (error) {
+      console.error('Error fetching clip:', error);
+      return null;
+    }
+  }
 }
 
 export const twitchOAuthService = new TwitchOAuthService();

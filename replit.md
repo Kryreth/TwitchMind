@@ -2,7 +2,7 @@
 
 ## Overview
 
-StreamDachi is a comprehensive Twitch integration application designed to enhance live streams with AI-powered features. It offers real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, moderators, subscribers), an automated shoutout system for VIPs with a 24-hour cooldown, and full per-stream chat logging. A key feature is its AI user learning engine, which provides personalized responses and configurable DachiPool settings, including ElevenLabs TTS integration. The platform boasts a dark-themed dashboard with a distinctive Twitch aesthetic, utilizing purple accents.
+StreamDachi is a comprehensive Twitch integration application designed to enhance live streams with AI-powered features. It offers real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, moderators, subscribers), an automated shoutout system for VIPs with a 24-hour cooldown, and full per-stream chat logging. A key feature is its AI user learning engine, which provides personalized responses and configurable DachiPool settings, including ElevenLabs TTS integration. The VIP Management page includes a Test Shoutout feature that allows streamers to preview a VIP's latest Twitch clip before going live. The platform boasts a dark-themed dashboard with a distinctive Twitch aesthetic, utilizing purple accents.
 
 ## User Preferences
 
@@ -49,8 +49,9 @@ Preferred communication style: Simple, everyday language.
 *   **Token Refresh System**: Automatic Twitch OAuth token renewal.
 *   **DachiStream Page Consolidation**: Dedicated `/dachistream` page for all stream interaction and AI behavior settings, including message selection, response modes, topic filters, general configuration, shoutouts, and TTS.
 *   **AI Personality System**: Introduces six personality options (Casual, Comedy, Quirky, Serious, Gaming, Professional) to customize AI response tone.
-*   **VIP Management System**: Dedicated `/vip-management` page for adding/removing VIPs, viewing shoutout cooldowns, and role tracking.
+*   **VIP Management System**: Dedicated `/vip-management` page for adding/removing VIPs, viewing shoutout cooldowns, and role tracking. Includes Test Shoutout feature to preview VIP's latest Twitch clip.
 *   **AI Learning Engine**: Periodic analysis (every 10 minutes) of user chat patterns to generate personality summaries for personalized AI responses.
+*   **Test Shoutout Feature**: Click any VIP's "Test" button to fetch and preview their latest Twitch clip in a modal, allowing streamers to test the shoutout system before going live.
 *   **Raid Management System**: Dedicated `/raid-management` page with two-way raid functionality. View incoming raids with clickable Twitch profile links. Send outgoing raids with VIPs shown first, supports any Twitch channel via search, and executes raid commands through Twitch Helix API.
 *   **VIP Shoutout Browser Source**: Toggleable browser source feature generating a static, private URL for OBS integration. Displays VIP shoutouts in real-time via WebSocket connection with animated gradient design.
 *   **Voice Rephrasing System**: Continuous voice-to-text with AI rephrasing on the Monitor page. Uses Web Speech API for browser-based transcription and llama-3.1-8b-instant (fastest Groq model) for ultra-fast rephrasing. After 5 seconds of silence, AI automatically rephrases spoken text (same meaning, different words) removing stutters and filler words. Auto-pauses DachiStream while speaking to prevent interruptions.

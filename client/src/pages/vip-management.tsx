@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Shield, Trash2, Plus, Clock, Loader2, Eye, Copy, CheckCircle } from "lucide-react";
+import { Shield, Trash2, Plus, Clock, Loader2, Eye, Copy, CheckCircle, Video } from "lucide-react";
 import type { UserProfile } from "@shared/schema";
 
 interface TwitchSearchUser {
@@ -24,6 +25,8 @@ export default function VIPManagement() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [browserSourceUrl, setBrowserSourceUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [testShoutoutUser, setTestShoutoutUser] = useState<UserProfile | null>(null);
+  const [testClip, setTestClip] = useState<{ url: string; title: string } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -223,6 +226,39 @@ export default function VIPManagement() {
     },
   });
 
+  const testShoutoutMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const response = await apiRequest("GET", `/api/twitch/user-clip?username=${username}`, undefined);
+      return await response.json();
+    },
+    onSuccess: (data: { clip: { url: string; title: string } | null }) => {
+      if (data.clip) {
+        setTestClip(data.clip);
+      } else {
+        toast({
+          title: "No Clips Found",
+          description: `${testShoutoutUser?.username} doesn't have any public clips yet.`,
+          variant: "destructive",
+        });
+        setTestShoutoutUser(null);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to fetch test clip.",
+        variant: "destructive",
+      });
+      setTestShoutoutUser(null);
+    },
+  });
+
+  const handleTestShoutout = (vip: UserProfile) => {
+    setTestShoutoutUser(vip);
+    setTestClip(null);
+    testShoutoutMutation.mutate(vip.username);
+  };
+
   const copyToClipboard = () => {
     if (browserSourceUrl) {
       navigator.clipboard.writeText(browserSourceUrl);
@@ -385,6 +421,16 @@ export default function VIPManagement() {
                     {vip.isMod && <Badge variant="secondary">Mod</Badge>}
                     {vip.isSubscriber && <Badge variant="secondary">Sub</Badge>}
                     <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTestShoutout(vip)}
+                      disabled={testShoutoutMutation.isPending}
+                      data-testid={`button-test-shoutout-${vip.userId}`}
+                    >
+                      <Video className="h-4 w-4 mr-1" />
+                      Test
+                    </Button>
+                    <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => handleRemoveVip(vip.userId)}
@@ -492,6 +538,47 @@ export default function VIPManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Test Shoutout Clip Modal */}
+      <Dialog open={!!testShoutoutUser} onOpenChange={() => {
+        setTestShoutoutUser(null);
+        setTestClip(null);
+      }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Test Shoutout: {testShoutoutUser?.username}</DialogTitle>
+            <DialogDescription>
+              {testShoutoutMutation.isPending 
+                ? "Fetching latest clip from Twitch..." 
+                : testClip 
+                  ? "Preview of their latest Twitch clip"
+                  : "Loading clip..."}
+            </DialogDescription>
+          </DialogHeader>
+          {testShoutoutMutation.isPending ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : testClip ? (
+            <div className="space-y-4">
+              <div className="aspect-video w-full">
+                <iframe
+                  src={`${testClip.url.replace('clip/', 'clip/')}?parent=${window.location.hostname}&autoplay=false`}
+                  className="w-full h-full rounded-md"
+                  allowFullScreen
+                  title={testClip.title}
+                />
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-foreground mb-1">{testClip.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  This is a preview of what viewers might see during a shoutout
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

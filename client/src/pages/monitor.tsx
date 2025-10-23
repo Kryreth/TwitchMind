@@ -297,16 +297,23 @@ export default function Monitor() {
         </Card>
 
         {/* VIP Raid List */}
-        {vipStreams.length > 0 && (
-          <Card data-testid="card-vip-streams">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                VIP Streams Online
-              </CardTitle>
-              <CardDescription>Your VIPs who are currently live</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card data-testid="card-vip-streams">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              VIP Streams Online
+              {vipStreams.length > 0 && (
+                <Badge variant="secondary">{vipStreams.length}</Badge>
+              )}
+            </CardTitle>
+            <CardDescription>Quick access to raid your VIPs who are currently live</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {vipStreamsLoading ? (
+              <div className="text-sm text-muted-foreground">Loading VIP streams...</div>
+            ) : vipStreams.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No VIPs currently streaming. They'll appear here when they go live!</div>
+            ) : (
               <ScrollArea className="h-[200px]">
                 <div className="space-y-3">
                   {vipStreams.map((stream) => (
@@ -354,9 +361,9 @@ export default function Monitor() {
                   ))}
                 </div>
               </ScrollArea>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Stream Player Dialog */}
         <Dialog open={!!selectedStream} onOpenChange={() => setSelectedStream(null)}>

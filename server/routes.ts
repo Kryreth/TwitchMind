@@ -460,6 +460,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's latest clip for test shoutout
+  app.get("/api/twitch/user-clip", async (req, res) => {
+    try {
+      const { username } = req.query;
+      
+      if (!username || typeof username !== 'string') {
+        return res.status(400).json({ error: "Username parameter is required" });
+      }
+
+      const clip = await twitchOAuthService.getLatestClip(username);
+      res.json({ clip });
+    } catch (error) {
+      console.error("Error fetching user clip:", error);
+      res.status(500).json({ error: "Failed to fetch user clip" });
+    }
+  });
+
   // Raid Management
   app.get("/api/raids", async (req, res) => {
     try {
