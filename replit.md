@@ -2,7 +2,7 @@
 
 ## Overview
 
-StreamDachi is a comprehensive Twitch integration application designed to enhance live streams with AI-powered features. It offers real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, moderators, subscribers), an automated shoutout system for VIPs with a 24-hour cooldown, and full per-stream chat logging. A key feature is its AI user learning engine, which provides personalized responses and configurable DachiPool settings, including ElevenLabs TTS integration. The VIP Management page includes a Test Shoutout feature that allows streamers to preview a VIP's latest Twitch clip before going live. The platform boasts a dark-themed dashboard with a distinctive Twitch aesthetic, utilizing purple accents.
+StreamDachi is a comprehensive Twitch integration application designed to enhance live streams with AI-powered voice features. It offers real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, moderators, subscribers), an automated shoutout system for VIPs with a 24-hour cooldown, and full per-stream chat logging. A key feature is its AI user learning engine, which provides personalized responses and configurable StreamDachi settings. The platform includes a hands-free voice AI system with continuous listening, automatic AI rephrasing using Groq, and unlimited free high-quality TTS using Puter.js (Neural/Generative engines). The VIP Management page includes a Test Shoutout feature that allows streamers to preview a VIP's latest Twitch clip before going live. The platform boasts a dark-themed dashboard with a distinctive Twitch aesthetic, utilizing purple accents.
 
 ## User Preferences
 
@@ -22,9 +22,9 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 
 **Server Framework**: Express.js with TypeScript, providing RESTful API endpoints and a WebSocket server for real-time communication.
-**Database Layer**: Drizzle ORM with Neon PostgreSQL serverless driver, utilizing a schema-first approach for type safety. Key tables include `user_profiles`, `user_insights`, `chat_messages`, `ai_analysis`, `ai_commands`, `raids`, and `settings`. Chat messages are enhanced with `userId`, `streamId`, and `eventType` for detailed logging. Settings table includes browser source tokens for OBS integration.
+**Database Layer**: Drizzle ORM with Neon PostgreSQL serverless driver, utilizing a schema-first approach for type safety. Key tables include `user_profiles`, `user_insights`, `chat_messages`, `ai_analysis`, `ai_commands`, `raids`, `voice_ai_responses`, and `settings`. Chat messages are enhanced with `userId`, `streamId`, and `eventType` for detailed logging. Settings table includes browser source tokens for OBS integration. Voice AI responses table logs all original and rephrased text with timestamps and speech status.
 **Real-time Communication**: A WebSocket server using the `ws` library broadcasts new messages, AI analysis, and connection statuses.
-**Service Layer**: Includes `storage.ts` for database abstraction, `openai-service.ts` (now using Groq SDK) for AI analysis, `twitch-client.ts` for Twitch chat interaction and role tracking, and `ai-learning-service.ts` for periodic AI user learning.
+**Service Layer**: Includes `storage.ts` for database abstraction, `groq-service.ts` for AI analysis and rephrasing, `twitch-client.ts` for Twitch chat interaction and role tracking, and `ai-learning-service.ts` for periodic AI user learning.
 
 ### Key Architectural Decisions
 
@@ -35,7 +35,7 @@ Preferred communication style: Simple, everyday language.
 5.  **AI Learning Engine**: Periodically analyzes user chat history to generate personality summaries, now powered by Groq AI.
 6.  **Auto-Shoutout System**: Automated greetings for VIP users with a configurable 24-hour cooldown.
 7.  **Per-Stream Chat Logging**: Unique `streamId` for each session enables detailed historical analysis.
-8.  **DachiStream Configuration**: Comprehensive AI behavior customization, including energy levels, response modes, and ElevenLabs TTS integration.
+8.  **StreamDachi Voice AI**: Comprehensive AI behavior customization with hands-free continuous voice recognition, automatic AI rephrasing via Groq, and unlimited free Neural/Generative TTS via Puter.js.
 9.  **Dark Mode First**: Prioritized design for optimal viewing during long streaming sessions.
 
 ### Feature Specifications
@@ -54,12 +54,11 @@ Preferred communication style: Simple, everyday language.
 *   **Test Shoutout Feature**: Click any VIP's "Test" button to fetch and preview their latest Twitch clip in a modal, allowing streamers to test the shoutout system before going live.
 *   **Raid Management System**: Dedicated `/raid-management` page with two-way raid functionality. View incoming raids with clickable Twitch profile links. Send outgoing raids with VIPs shown first, supports any Twitch channel via search, and executes raid commands through Twitch Helix API.
 *   **VIP Shoutout Browser Source**: Toggleable browser source feature generating a static, private URL for OBS integration. Displays VIP shoutouts in real-time via WebSocket connection with animated gradient design.
-*   **Voice Rephrasing System**: Hands-free continuous voice-to-text with automatic AI rephrasing on the Monitor page. Uses Web Speech API for browser-based transcription and llama-3.1-8b-instant (fastest Groq model) for ultra-fast rephrasing. Features continuous listening with auto-restart, transcript accumulation, and automatic AI rephrasing after 5 seconds of silence detection. Auto-pauses DachiStream while speaking to prevent interruptions.
-*   **Dual Audio System (Web Speech API TTS - Free)**: Two completely independent audio systems on the Monitor page, both using browser-native text-to-speech with zero API costs:
-    *   **AI Voice TTS**: Automatically speaks the AI-rephrased text aloud when enabled. Activates after 5 seconds of silence to provide instant audio feedback of the rephrased message.
-    *   **VIP Shoutout Audio**: Speaks VIP greeting messages when VIPs join chat (separate from AI voice system).
-    *   Both systems share audio settings (voice selection from OS voices, adjustable pitch 0.5x-2.0x, speed 0.5x-2.0x, volume 0%-100%).
-    *   Settings panel shows "(Shared for both)" indicator when both audio systems are enabled.
+*   **StreamDachi Voice AI System**: Hands-free continuous voice-to-text with automatic AI rephrasing on the Monitor page. Uses Web Speech API for browser-based transcription and llama-3.1-8b-instant (fastest Groq model) for ultra-fast rephrasing. Features continuous listening with auto-restart, transcript accumulation, and automatic AI rephrasing after 5 seconds of silence detection. Auto-pauses DachiStream while speaking to prevent interruptions. All voice AI responses are logged to database with timestamps for review.
+*   **Dual Audio System (Puter.js + Web Speech API)**: Two completely independent audio systems on the Monitor page:
+    *   **AI Voice TTS (Puter.js - Free Unlimited)**: Automatically speaks the AI-rephrased text aloud when enabled using Puter.js Neural or Generative engines (AWS Polly backend). Provides high-quality, human-like voices with three quality levels: Standard, Neural, and Generative. Activates after 5 seconds of silence to provide instant audio feedback of the rephrased message. Volume adjustable 0%-100%.
+    *   **VIP Shoutout Audio (Web Speech API)**: Speaks VIP greeting messages when VIPs join chat using browser-native TTS (separate from AI voice system). Shares voice selection, pitch (0.5x-2.0x), speed (0.5x-2.0x), and volume (0%-100%) settings with AI voice system.
+    *   Both systems are completely independent with separate enable/disable toggles.
 
 ## External Dependencies
 
@@ -84,5 +83,7 @@ Preferred communication style: Simple, everyday language.
 *   React Icons (`react-icons/si`): For specific icons like the Twitch logo.
 *   Recharts: For data visualization.
 
-**ElevenLabs**:
-*   For Text-to-Speech (TTS) integration within DachiPool settings.
+**Puter.js**:
+*   Free unlimited Text-to-Speech (TTS) with Neural and Generative quality engines (AWS Polly backend).
+*   Three quality tiers: Standard (good, fast), Neural (high quality, natural), Generative (best quality, most human-like).
+*   Zero API costs, no character limits, fully integrated into StreamDachi voice AI system.
