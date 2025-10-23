@@ -29,7 +29,6 @@ interface Settings {
   dachipoolEnergy: string;
   dachipoolMode: string;
   dachipoolShoutoutCooldownHours: number;
-  dachipoolElevenlabsEnabled: boolean;
   autoShoutoutsEnabled: boolean;
   ttsEnabled: boolean;
   ttsVoice: string | null;
@@ -57,7 +56,6 @@ export default function DachiStream() {
   const [dachipoolEnergy, setDachipoolEnergy] = useState("Balanced");
   const [dachipoolMode, setDachipoolMode] = useState("Auto");
   const [dachipoolShoutoutCooldownHours, setDachipoolShoutoutCooldownHours] = useState([24]);
-  const [dachipoolElevenlabsEnabled, setDachipoolElevenlabsEnabled] = useState(false);
   const [autoShoutoutsEnabled, setAutoShoutoutsEnabled] = useState(true);
   
   // TTS settings
@@ -87,7 +85,6 @@ export default function DachiStream() {
       setDachipoolEnergy(setting.dachipoolEnergy || "Balanced");
       setDachipoolMode(setting.dachipoolMode || "Auto");
       setDachipoolShoutoutCooldownHours([setting.dachipoolShoutoutCooldownHours || 24]);
-      setDachipoolElevenlabsEnabled(setting.dachipoolElevenlabsEnabled ?? false);
       setAutoShoutoutsEnabled(setting.autoShoutoutsEnabled ?? true);
       
       setTtsEnabled(setting.ttsEnabled ?? false);
@@ -135,7 +132,6 @@ export default function DachiStream() {
       dachipoolEnergy,
       dachipoolMode,
       dachipoolShoutoutCooldownHours: dachipoolShoutoutCooldownHours[0],
-      dachipoolElevenlabsEnabled,
       autoShoutoutsEnabled,
       ttsEnabled,
       ttsVoice,
@@ -401,21 +397,6 @@ export default function DachiStream() {
                   checked={autoShoutoutsEnabled}
                   onCheckedChange={setAutoShoutoutsEnabled}
                   data-testid="switch-auto-shoutouts"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="elevenlabs">ElevenLabs TTS</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Enable voice synthesis
-                  </p>
-                </div>
-                <Switch
-                  id="elevenlabs"
-                  checked={dachipoolElevenlabsEnabled}
-                  onCheckedChange={setDachipoolElevenlabsEnabled}
-                  data-testid="switch-elevenlabs"
                 />
               </div>
             </div>

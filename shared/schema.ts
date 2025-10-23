@@ -119,11 +119,9 @@ export const settings = pgTable("settings", {
   dachipoolEnergy: text("dachipool_energy").notNull().default("Balanced"), // Balanced, High, Low
   dachipoolMode: text("dachipool_mode").notNull().default("Auto"), // Auto, Manual
   dachipoolShoutoutCooldownHours: integer("dachipool_shoutout_cooldown_hours").notNull().default(24),
-  dachipoolOpenaiModel: text("dachipool_openai_model").notNull().default("llama-3.3-70b-versatile"),
-  dachipoolOpenaiTemp: integer("dachipool_openai_temp").notNull().default(7), // Stored as 0-10, divide by 10
+  dachipoolAiModel: text("dachipool_ai_model").notNull().default("llama-3.3-70b-versatile"),
+  dachipoolAiTemp: integer("dachipool_ai_temp").notNull().default(7), // Stored as 0-10, divide by 10
   aiPersonality: text("ai_personality").notNull().default("Casual"), // Casual, Comedy, Quirky, Serious, Gaming, Professional
-  dachipoolElevenlabsEnabled: boolean("dachipool_elevenlabs_enabled").notNull().default(false),
-  dachipoolElevenlabsVoice: text("dachipool_elevenlabs_voice").default("Default"),
   autoShoutoutsEnabled: boolean("auto_shoutouts_enabled").notNull().default(true),
   
   // Audio Settings
@@ -153,12 +151,6 @@ export const settings = pgTable("settings", {
   dachiastreamPaused: boolean("dachiastream_paused").notNull().default(false),
   dachiastreamAutoSendToChat: boolean("dachiastream_auto_send_to_chat").notNull().default(false),
   dachiastreamCycleInterval: integer("dachiastream_cycle_interval").notNull().default(15), // seconds between cycles (5-60)
-  
-  // ElevenLabs Usage Tracking
-  elevenlabsVoiceId: text("elevenlabs_voice_id"),
-  elevenlabsUsageQuota: integer("elevenlabs_usage_quota").default(0),
-  elevenlabsUsageUsed: integer("elevenlabs_usage_used").default(0),
-  elevenlabsUsageLastChecked: timestamp("elevenlabs_usage_last_checked"),
   
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

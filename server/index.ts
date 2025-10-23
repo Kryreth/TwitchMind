@@ -100,8 +100,8 @@ app.use((req, res, next) => {
               message.message,
               context,
               {
-                model: settings.dachipoolOpenaiModel || "gpt-4o-mini",
-                temperature: (settings.dachipoolOpenaiTemp || 7) / 10,
+                model: settings.dachipoolAiModel || "llama-3.3-70b-versatile",
+                temperature: (settings.dachipoolAiTemp || 7) / 10,
                 maxChars: settings.dachipoolMaxChars || 1000,
                 energy: settings.dachipoolEnergy || "Balanced",
                 personality: settings.aiPersonality || "Casual",

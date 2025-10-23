@@ -52,8 +52,8 @@ export default function AiControls() {
   useEffect(() => {
     if (settings && settings.length > 0) {
       const setting = settings[0];
-      setAiModel(setting.dachipoolOpenaiModel || "llama-3.3-70b-versatile");
-      setTemperature([setting.dachipoolOpenaiTemp || 7]);
+      setAiModel(setting.dachipoolAiModel || "llama-3.3-70b-versatile");
+      setTemperature([setting.dachipoolAiTemp || 7]);
       setAiPersonality(setting.aiPersonality || "Casual");
     }
   }, [settings]);
@@ -122,8 +122,8 @@ export default function AiControls() {
 
   const handleSaveAiSettings = () => {
     updateAiSettingsMutation.mutate({
-      dachipoolOpenaiModel: aiModel,
-      dachipoolOpenaiTemp: temperature[0],
+      dachipoolAiModel: aiModel,
+      dachipoolAiTemp: temperature[0],
       aiPersonality,
     });
   };
