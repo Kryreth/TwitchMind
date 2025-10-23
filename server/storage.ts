@@ -8,6 +8,7 @@ import {
   userInsights,
   authenticatedUsers,
   raids,
+  voiceAiResponses,
   type ChatMessage,
   type InsertChatMessage,
   type AiAnalysis,
@@ -26,6 +27,8 @@ import {
   type InsertAuthenticatedUser,
   type Raid,
   type InsertRaid,
+  type VoiceAiResponse,
+  type InsertVoiceAiResponse,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -84,6 +87,10 @@ export interface IStorage {
   // Browser Source
   generateBrowserSourceToken(settingsId: string): Promise<string>;
   getBrowserSourceSettings(token: string): Promise<Settings | undefined>;
+  
+  // Voice AI Responses
+  createVoiceAiResponse(response: InsertVoiceAiResponse): Promise<VoiceAiResponse>;
+  getVoiceAiResponses(limit?: number): Promise<VoiceAiResponse[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -442,6 +449,23 @@ export class DatabaseStorage implements IStorage {
       .from(settings)
       .where(eq(settings.browserSourceToken, token));
     return setting || undefined;
+  }
+
+  // Voice AI Responses
+  async createVoiceAiResponse(response: InsertVoiceAiResponse): Promise<VoiceAiResponse> {
+    const [created] = await db
+      .insert(voiceAiResponses)
+      .values(response)
+      .returning();
+    return created;
+  }
+
+  async getVoiceAiResponses(limit: number = 50): Promise<VoiceAiResponse[]> {
+    return await db
+      .select()
+      .from(voiceAiResponses)
+      .orderBy(desc(voiceAiResponses.timestamp))
+      .limit(limit);
   }
 }
 

@@ -870,7 +870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Voice Enhancement API
+  // Voice Enhancement API - with database logging
   app.post("/api/voice/enhance", async (req, res) => {
     try {
       const { text } = req.body;
@@ -882,10 +882,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { enhanceSpeechForChat } = await import("./groq-service");
       const result = await enhanceSpeechForChat(text);
       
+      // Save to database
+      try {
+        await storage.createVoiceAiResponse({
+          originalText: result.original,
+          rephrasedText: result.enhanced,
+          wasSpoken: false, // Will be updated when TTS plays it
+        });
+      } catch (dbError) {
+        console.error("Failed to save voice AI response to DB:", dbError);
+        // Don't fail the request if DB save fails
+      }
+      
       res.json(result);
     } catch (error) {
       console.error("Error enhancing speech:", error);
       res.status(500).json({ error: "Failed to enhance speech" });
+    }
+  });
+
+  // Voice AI Response History - for Monitor page
+  app.get("/api/voice/responses", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const responses = await storage.getVoiceAiResponses(limit);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching voice AI responses:", error);
+      res.status(500).json({ error: "Failed to fetch voice AI responses" });
     }
   });
 
