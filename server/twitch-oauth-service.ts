@@ -144,6 +144,83 @@ export class TwitchOAuthService {
     // Return true if token expires within the next hour
     return expiresAt <= oneHourFromNow;
   }
+
+  /**
+   * Gets an app access token using client credentials flow
+   * This token can be used for API calls that don't require user authentication
+   */
+  private appAccessToken: string | null = null;
+  private appTokenExpiry: Date | null = null;
+
+  async getAppAccessToken(): Promise<string> {
+    // Return cached token if still valid
+    if (this.appAccessToken && this.appTokenExpiry && this.appTokenExpiry > new Date()) {
+      return this.appAccessToken;
+    }
+
+    const params = new URLSearchParams({
+      client_id: TWITCH_CLIENT_ID,
+      client_secret: TWITCH_CLIENT_SECRET,
+      grant_type: 'client_credentials',
+    });
+
+    const response = await fetch('https://id.twitch.tv/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to get app access token: ${error}`);
+    }
+
+    const data = await response.json();
+    this.appAccessToken = data.access_token || null;
+    this.appTokenExpiry = new Date(Date.now() + (data.expires_in || 3600) * 1000);
+    
+    if (!this.appAccessToken) {
+      throw new Error('No access token received from Twitch');
+    }
+    
+    return this.appAccessToken;
+  }
+
+  /**
+   * Searches for Twitch users by username
+   * Returns up to 20 results matching the query
+   */
+  async searchUsers(query: string): Promise<TwitchUser[]> {
+    if (!query || query.length < 1) {
+      return [];
+    }
+
+    const appToken = await this.getAppAccessToken();
+
+    const response = await fetch(`https://api.twitch.tv/helix/search/channels?query=${encodeURIComponent(query)}&first=20`, {
+      headers: {
+        'Authorization': `Bearer ${appToken}`,
+        'Client-Id': TWITCH_CLIENT_ID,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to search Twitch users: ${error}`);
+    }
+
+    const data = await response.json();
+    
+    // Convert channel search results to user format
+    return (data.data || []).map((channel: any) => ({
+      id: channel.broadcaster_id,
+      login: channel.broadcaster_login,
+      display_name: channel.display_name,
+      profile_image_url: channel.thumbnail_url,
+    }));
+  }
 }
 
 export const twitchOAuthService = new TwitchOAuthService();

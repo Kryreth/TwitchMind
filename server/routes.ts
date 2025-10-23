@@ -422,6 +422,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/twitch/search-users", async (req, res) => {
+    try {
+      const { query } = req.query;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ error: "Query parameter is required" });
+      }
+
+      if (query.length < 2) {
+        return res.json([]);
+      }
+
+      const users = await twitchOAuthService.searchUsers(query);
+      res.json(users);
+    } catch (error) {
+      console.error("Error searching Twitch users:", error);
+      res.status(500).json({ error: "Failed to search Twitch users" });
+    }
+  });
+
   // DachiStream Controls - imported from index.ts where service is initialized
   app.post("/api/dachistream/pause", async (req, res) => {
     try {
