@@ -90,6 +90,16 @@ export const authenticatedUsers = pgTable("authenticated_users", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Raids Table - Track incoming raids
+export const raids = pgTable("raids", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromUserId: text("from_user_id").notNull(), // Raider's Twitch user ID
+  fromUsername: text("from_username").notNull(), // Raider's username
+  fromDisplayName: text("from_display_name").notNull(), // Raider's display name
+  viewers: integer("viewers").notNull().default(0), // Number of viewers in raid
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
 // Settings Table - Enhanced with DachiPool configuration
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -98,6 +108,10 @@ export const settings = pgTable("settings", {
   autoModeration: boolean("auto_moderation").notNull().default(false),
   sentimentThreshold: integer("sentiment_threshold").notNull().default(2), // 1-5
   enableAiAnalysis: boolean("enable_ai_analysis").notNull().default(true),
+  
+  // Browser Source Settings
+  browserSourceEnabled: boolean("browser_source_enabled").notNull().default(false),
+  browserSourceToken: text("browser_source_token"), // Unique token for OBS URL
   
   // DachiPool Settings
   dachipoolEnabled: boolean("dachipool_enabled").notNull().default(true),
@@ -200,6 +214,11 @@ export const insertAuthenticatedUserSchema = createInsertSchema(authenticatedUse
   updatedAt: true,
 });
 
+export const insertRaidSchema = createInsertSchema(raids).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Types
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
@@ -224,6 +243,9 @@ export type InsertStreamerSpeaks = z.infer<typeof insertStreamerSpeaksSchema>;
 
 export type AuthenticatedUser = typeof authenticatedUsers.$inferSelect;
 export type InsertAuthenticatedUser = z.infer<typeof insertAuthenticatedUserSchema>;
+
+export type Raid = typeof raids.$inferSelect;
+export type InsertRaid = z.infer<typeof insertRaidSchema>;
 
 // Extended types for frontend
 export type ChatMessageWithAnalysis = ChatMessage & {
