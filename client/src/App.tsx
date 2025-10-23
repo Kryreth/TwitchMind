@@ -13,6 +13,7 @@ import AiControls from "@/pages/ai-controls";
 import DachiStream from "@/pages/dachistream";
 import SettingsPage from "@/pages/settings";
 import VIPManagement from "@/pages/vip-management";
+import RaidManagement from "@/pages/raid-management";
 import Monitor from "@/pages/monitor";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/ai-controls" component={AiControls} />
       <Route path="/dachistream" component={DachiStream} />
       <Route path="/vip-management" component={VIPManagement} />
+      <Route path="/raid-management" component={RaidManagement} />
       <Route path="/monitor" component={Monitor} />
       <Route path="/settings" component={SettingsPage} />
     </Switch>

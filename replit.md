@@ -15,14 +15,14 @@ Preferred communication style: Simple, everyday language.
 **Framework**: React with TypeScript, using Vite as the build tool.
 **UI Component System**: Shadcn UI (New York variant) built on Radix UI primitives, featuring a dark-first design with Twitch-inspired purple accent colors (HSL 265 100% 70%).
 **State Management**: TanStack Query (React Query) for server state and data fetching, integrated with WebSockets for real-time chat updates.
-**Routing**: Wouter for lightweight client-side routing across seven main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, and Settings.
+**Routing**: Wouter for lightweight client-side routing across eight main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, Raid Management, Monitor, and Settings.
 **Styling**: Tailwind CSS with custom design tokens for theming and a custom color palette matching the Twitch aesthetic.
 **Data Visualization**: Recharts library for analytics charts, including bar charts for user activity, pie charts for sentiment distribution, and line charts for sentiment trends.
 
 ### Backend Architecture
 
 **Server Framework**: Express.js with TypeScript, providing RESTful API endpoints and a WebSocket server for real-time communication.
-**Database Layer**: Drizzle ORM with Neon PostgreSQL serverless driver, utilizing a schema-first approach for type safety. Key tables include `user_profiles`, `user_insights`, `chat_messages`, `ai_analysis`, `ai_commands`, and `settings`. Chat messages are enhanced with `userId`, `streamId`, and `eventType` for detailed logging.
+**Database Layer**: Drizzle ORM with Neon PostgreSQL serverless driver, utilizing a schema-first approach for type safety. Key tables include `user_profiles`, `user_insights`, `chat_messages`, `ai_analysis`, `ai_commands`, `raids`, and `settings`. Chat messages are enhanced with `userId`, `streamId`, and `eventType` for detailed logging. Settings table includes browser source tokens for OBS integration.
 **Real-time Communication**: A WebSocket server using the `ws` library broadcasts new messages, AI analysis, and connection statuses.
 **Service Layer**: Includes `storage.ts` for database abstraction, `openai-service.ts` (now using Groq SDK) for AI analysis, `twitch-client.ts` for Twitch chat interaction and role tracking, and `ai-learning-service.ts` for periodic AI user learning.
 
@@ -51,12 +51,14 @@ Preferred communication style: Simple, everyday language.
 *   **AI Personality System**: Introduces six personality options (Casual, Comedy, Quirky, Serious, Gaming, Professional) to customize AI response tone.
 *   **VIP Management System**: Dedicated `/vip-management` page for adding/removing VIPs, viewing shoutout cooldowns, and role tracking.
 *   **AI Learning Engine**: Periodic analysis (every 10 minutes) of user chat patterns to generate personality summaries for personalized AI responses.
+*   **Raid Management System**: Dedicated `/raid-management` page with two-way raid functionality. View incoming raids with clickable Twitch profile links. Send outgoing raids with VIPs shown first, supports any Twitch channel via search, and executes raid commands through Twitch Helix API.
+*   **VIP Shoutout Browser Source**: Toggleable browser source feature generating a static, private URL for OBS integration. Displays VIP shoutouts in real-time via WebSocket connection with animated gradient design.
 
 ## External Dependencies
 
 **Twitch Integration**:
-*   `tmi.js`: For connecting to Twitch IRC and listening to chat messages.
-*   Twitch Helix API: For global user search and OAuth authentication.
+*   `tmi.js`: For connecting to Twitch IRC and listening to chat messages, including incoming raid detection.
+*   Twitch Helix API: For global user search, OAuth authentication, and outgoing raid commands via POST /helix/raids endpoint.
 
 **GroqCloud AI Integration**:
 *   `groq-sdk`: Official SDK for all AI functionalities.

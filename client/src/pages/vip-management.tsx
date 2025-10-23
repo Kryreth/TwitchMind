@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Shield, Trash2, Plus, Clock, Loader2 } from "lucide-react";
+import { Shield, Trash2, Plus, Clock, Loader2, Eye, Copy, CheckCircle } from "lucide-react";
 import type { UserProfile } from "@shared/schema";
 
 interface TwitchSearchUser {
@@ -22,6 +22,8 @@ export default function VIPManagement() {
   const [newUsername, setNewUsername] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [browserSourceUrl, setBrowserSourceUrl] = useState("");
+  const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -181,6 +183,65 @@ export default function VIPManagement() {
   const settingsArray = Array.isArray(settings) ? settings : [];
   const autoShoutoutsEnabled = settingsArray[0]?.autoShoutoutsEnabled;
   const cooldownHours = settingsArray[0]?.dachipoolShoutoutCooldownHours || 24;
+  const browserSourceEnabled = settingsArray[0]?.browserSourceEnabled || false;
+  const browserSourceToken = settingsArray[0]?.browserSourceToken;
+
+  const generateBrowserSourceMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/browser-source/generate", {});
+      return await response.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      setBrowserSourceUrl(data.url);
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "Browser Source URL Generated",
+        description: "Copy the URL and add it as a Browser Source in OBS.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate browser source URL.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleBrowserSourceMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      return await apiRequest("POST", "/api/browser-source/toggle", { enabled });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: browserSourceEnabled ? "Browser Source Disabled" : "Browser Source Enabled",
+        description: browserSourceEnabled 
+          ? "Shoutouts will no longer appear in OBS." 
+          : "Shoutouts will now appear in OBS when the browser source is active.",
+      });
+    },
+  });
+
+  const copyToClipboard = () => {
+    if (browserSourceUrl) {
+      navigator.clipboard.writeText(browserSourceUrl);
+      setCopied(true);
+      toast({
+        title: "URL Copied!",
+        description: "Browser source URL copied to clipboard.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  useEffect(() => {
+    if (browserSourceToken) {
+      const domain = window.location.host;
+      const protocol = window.location.protocol;
+      setBrowserSourceUrl(`${protocol}//${domain}/browser-source/${browserSourceToken}`);
+    }
+  }, [browserSourceToken]);
 
   return (
     <div className="p-6 space-y-6">
@@ -336,6 +397,98 @@ export default function VIPManagement() {
                 </div>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Browser Source for OBS */}
+      <Card data-testid="card-browser-source">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5 text-primary" />
+            VIP Shoutout Browser Source
+          </CardTitle>
+          <CardDescription>
+            Generate a URL for displaying VIP shoutouts in OBS or streaming software
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-muted">
+            <div className="flex-1">
+              <p className="font-medium text-foreground mb-1">Browser Source Status</p>
+              <p className="text-sm text-muted-foreground">
+                {browserSourceEnabled 
+                  ? "Browser source is active and will display shoutouts in real-time" 
+                  : "Browser source is disabled"}
+              </p>
+            </div>
+            <Button
+              variant={browserSourceEnabled ? "secondary" : "default"}
+              onClick={() => toggleBrowserSourceMutation.mutate(!browserSourceEnabled)}
+              disabled={toggleBrowserSourceMutation.isPending}
+              data-testid="button-toggle-browser-source"
+            >
+              {browserSourceEnabled ? "Disable" : "Enable"}
+            </Button>
+          </div>
+
+          {browserSourceEnabled && (
+            <>
+              {!browserSourceToken ? (
+                <div className="text-center py-4">
+                  <Button
+                    onClick={() => generateBrowserSourceMutation.mutate()}
+                    disabled={generateBrowserSourceMutation.isPending}
+                    data-testid="button-generate-url"
+                  >
+                    {generateBrowserSourceMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Generate Browser Source URL
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Browser Source URL
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={browserSourceUrl}
+                        readOnly
+                        className="font-mono text-sm"
+                        data-testid="input-browser-source-url"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={copyToClipboard}
+                        data-testid="button-copy-url"
+                      >
+                        {copied ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-muted space-y-2">
+                    <p className="font-medium text-sm text-foreground">How to use in OBS:</p>
+                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>In OBS, add a new "Browser" source</li>
+                      <li>Paste the URL above into the URL field</li>
+                      <li>Set width to 1920 and height to 1080</li>
+                      <li>VIP shoutouts will appear automatically when enabled!</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
