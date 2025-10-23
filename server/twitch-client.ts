@@ -246,6 +246,39 @@ export async function connectToTwitch(channel: string, username: string = "justi
     broadcastToClients("twitch_disconnected", { reason });
   });
 
+  // Listen for incoming raids
+  twitchClient.on("raided", async (channel, username, viewers) => {
+    console.log(`🎉 RAID! ${username} raided with ${viewers} viewers!`);
+    
+    try {
+      // Store the raid in database
+      const raid = await storage.createRaid({
+        fromUserId: username, // Use username as fallback since tags aren't available
+        fromUsername: username,
+        fromDisplayName: username,
+        viewers: viewers || 0,
+      });
+
+      // Broadcast raid notification to connected clients
+      broadcastToClients("incoming_raid", raid);
+      
+      // Also log it as a chat message for history
+      await storage.createChatMessage({
+        userId: username,
+        username,
+        message: `🎉 RAID from ${username} with ${viewers} viewers!`,
+        channel,
+        eventType: "raid",
+        userColor: "#9146FF",
+        badges: {},
+        emotes: null,
+        metadata: { viewers: viewers || 0 },
+      });
+    } catch (error) {
+      console.error("Error processing raid:", error);
+    }
+  });
+
   await twitchClient.connect();
   return twitchClient;
 }

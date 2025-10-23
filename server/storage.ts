@@ -7,6 +7,7 @@ import {
   userProfiles,
   userInsights,
   authenticatedUsers,
+  raids,
   type ChatMessage,
   type InsertChatMessage,
   type AiAnalysis,
@@ -23,6 +24,8 @@ import {
   type UserProfileWithInsight,
   type AuthenticatedUser,
   type InsertAuthenticatedUser,
+  type Raid,
+  type InsertRaid,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -72,6 +75,15 @@ export interface IStorage {
   getAuthenticatedUser(): Promise<AuthenticatedUser | undefined>;
   saveAuthenticatedUser(user: InsertAuthenticatedUser): Promise<AuthenticatedUser>;
   deleteAuthenticatedUser(): Promise<void>;
+  updateAuthenticatedUserTokens(id: string, accessToken: string, refreshToken: string, tokenExpiresAt: Date): Promise<AuthenticatedUser>;
+  
+  // Raids
+  getRaids(limit?: number): Promise<Raid[]>;
+  createRaid(raid: InsertRaid): Promise<Raid>;
+  
+  // Browser Source
+  generateBrowserSourceToken(settingsId: string): Promise<string>;
+  getBrowserSourceSettings(token: string): Promise<Settings | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -392,6 +404,44 @@ export class DatabaseStorage implements IStorage {
       .where(eq(authenticatedUsers.id, userId))
       .returning();
     return updated;
+  }
+
+  // Raids
+  async getRaids(limit: number = 50): Promise<Raid[]> {
+    return await db
+      .select()
+      .from(raids)
+      .orderBy(desc(raids.timestamp))
+      .limit(limit);
+  }
+
+  async createRaid(raid: InsertRaid): Promise<Raid> {
+    const [created] = await db
+      .insert(raids)
+      .values(raid)
+      .returning();
+    return created;
+  }
+
+  // Browser Source
+  async generateBrowserSourceToken(settingsId: string): Promise<string> {
+    const token = crypto.randomUUID();
+    await db
+      .update(settings)
+      .set({ 
+        browserSourceToken: token,
+        updatedAt: new Date()
+      })
+      .where(eq(settings.id, settingsId));
+    return token;
+  }
+
+  async getBrowserSourceSettings(token: string): Promise<Settings | undefined> {
+    const [setting] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.browserSourceToken, token));
+    return setting || undefined;
   }
 }
 

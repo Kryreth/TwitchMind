@@ -28,7 +28,7 @@ export class TwitchOAuthService {
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: REDIRECT_URI,
       response_type: 'code',
-      scope: 'user:read:email chat:read chat:edit',
+      scope: 'user:read:email chat:read chat:edit channel:manage:raids',
     });
 
     return `https://id.twitch.tv/oauth2/authorize?${params.toString()}`;
@@ -220,6 +220,65 @@ export class TwitchOAuthService {
       display_name: channel.display_name,
       profile_image_url: channel.thumbnail_url,
     }));
+  }
+
+  /**
+   * Initiates a raid to another broadcaster's channel
+   * Requires channel:manage:raids scope
+   */
+  async startRaid(fromBroadcasterId: string, toBroadcasterId: string, accessToken: string): Promise<boolean> {
+    const params = new URLSearchParams({
+      from_broadcaster_id: fromBroadcasterId,
+      to_broadcaster_id: toBroadcasterId,
+    });
+
+    const response = await fetch(`https://api.twitch.tv/helix/raids?${params.toString()}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Client-Id': TWITCH_CLIENT_ID,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`Failed to start raid: ${error}`);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Gets user information by username
+   */
+  async getUserByUsername(username: string, accessToken?: string): Promise<TwitchUser | null> {
+    const token = accessToken || await this.getAppAccessToken();
+
+    const response = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Client-Id': TWITCH_CLIENT_ID,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const user = data.data?.[0];
+    
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      login: user.login,
+      display_name: user.display_name,
+      profile_image_url: user.profile_image_url,
+    };
   }
 }
 
