@@ -82,7 +82,7 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
     
     // Start AI learning service
@@ -91,7 +91,7 @@ app.use((req, res, next) => {
     });
 
     // Start DachiStream service with AI response callback and status updates
-    dachiStreamService.start(
+    await dachiStreamService.start(
       async (message, context) => {
         try {
           const allSettings = await storage.getSettings();

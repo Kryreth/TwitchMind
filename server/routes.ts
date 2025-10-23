@@ -262,6 +262,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Update DachiStream cycle interval if it changed
+      if (req.body.dachiastreamCycleInterval !== undefined && (app as any).dachiStreamService) {
+        const dachiStreamService = (app as any).dachiStreamService;
+        dachiStreamService.updateCycleInterval(req.body.dachiastreamCycleInterval);
+      }
+      
       res.json(setting);
     } catch (error) {
       console.error("Error updating settings:", error);

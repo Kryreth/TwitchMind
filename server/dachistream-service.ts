@@ -43,23 +43,51 @@ export class DachiStreamService {
   private maxLogs = 100;
   private lastCycleTime: Date | null = null;
   private onStatusChange?: (state: DachiStreamState) => void;
+  private cycleIntervalSeconds: number = 15;
 
   constructor(storage: IStorage) {
     this.storage = storage;
   }
 
-  start(onMessageSelected: (message: ChatMessage, context: string) => Promise<void>, onStatusChange?: (state: DachiStreamState) => void) {
+  async start(onMessageSelected: (message: ChatMessage, context: string) => Promise<void>, onStatusChange?: (state: DachiStreamState) => void) {
     this.onMessageSelected = onMessageSelected;
     this.onStatusChange = onStatusChange;
     
-    // Run every 15 seconds
+    // Fetch cycle interval from settings
+    const allSettings = await this.storage.getSettings();
+    const settings = allSettings[0];
+    if (settings && settings.dachiastreamCycleInterval) {
+      this.cycleIntervalSeconds = settings.dachiastreamCycleInterval;
+    }
+    
+    // Start interval with configured cycle time
     this.intervalId = setInterval(() => {
       this.processBuffer();
-    }, 15000);
+    }, this.cycleIntervalSeconds * 1000);
     
-    this.addLog("info", "DachiStream service started (15-second cycle)");
+    this.addLog("info", `DachiStream service started (${this.cycleIntervalSeconds}-second cycle)`);
     this.updateStatus("collecting");
-    console.log("DachiStream service started (15-second cycle)");
+    console.log(`DachiStream service started (${this.cycleIntervalSeconds}-second cycle)`);
+  }
+
+  updateCycleInterval(intervalSeconds: number) {
+    if (intervalSeconds < 5 || intervalSeconds > 60) {
+      console.warn("Cycle interval must be between 5 and 60 seconds");
+      return;
+    }
+    
+    this.cycleIntervalSeconds = intervalSeconds;
+    
+    // Restart the interval with new timing
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = setInterval(() => {
+        this.processBuffer();
+      }, this.cycleIntervalSeconds * 1000);
+      
+      this.addLog("info", `Cycle interval updated to ${this.cycleIntervalSeconds} seconds`);
+      console.log(`DachiStream cycle interval updated to ${this.cycleIntervalSeconds} seconds`);
+    }
   }
 
   stop() {
