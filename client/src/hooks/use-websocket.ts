@@ -37,6 +37,11 @@ export function useWebSocket() {
           case "twitch_disconnected":
             console.log("Twitch disconnected:", data);
             break;
+          case "auto_shoutout":
+            console.log("Auto shoutout:", data);
+            // Emit custom browser event for shoutout
+            window.dispatchEvent(new CustomEvent("vip_shoutout", { detail: data }));
+            break;
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);

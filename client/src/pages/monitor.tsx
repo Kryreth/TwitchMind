@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
+import { useTextToSpeech } from "@/hooks/use-text-to-speech";
 import type { ChatMessage } from "@shared/schema";
 
 type DachiStreamStatus = "idle" | "collecting" | "processing" | "selecting_message" | "building_context" | "waiting_for_ai" | "disabled" | "paused";
@@ -88,6 +89,8 @@ export default function Monitor() {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [dachipoolPaused, setDachipoolPaused] = useState(false);
 
+  const tts = useTextToSpeech();
+
   const {
     isListening,
     transcript,
@@ -115,6 +118,46 @@ export default function Monitor() {
     autoEnhance: true,
     continuous: true,
   });
+
+  // Fetch TTS settings from database
+  const { data: settings } = useQuery<any[]>({
+    queryKey: ["/api/settings"],
+  });
+
+  // Listen for VIP shoutout events and trigger TTS
+  useEffect(() => {
+    const handleShoutout = (event: any) => {
+      const { username, message } = event.detail;
+      
+      // Check if TTS is enabled in settings
+      const settingsData = settings?.[0];
+      if (settingsData?.ttsEnabled && tts.isSupported) {
+        console.log("Speaking shoutout for", username);
+        
+        // Configure TTS with saved settings
+        tts.updateSettings({
+          enabled: true,
+          voice: settingsData.ttsVoice,
+          pitch: (settingsData.ttsPitch || 10) / 10,
+          rate: (settingsData.ttsRate || 10) / 10,
+          volume: (settingsData.ttsVolume || 10) / 10,
+        });
+        
+        // Speak the shoutout message
+        tts.speak(message);
+        
+        // Show toast notification
+        toast({
+          title: "VIP Shoutout!",
+          description: message,
+          duration: 5000,
+        });
+      }
+    };
+
+    window.addEventListener("vip_shoutout", handleShoutout);
+    return () => window.removeEventListener("vip_shoutout", handleShoutout);
+  }, [settings, tts, toast]);
 
   // Auto-pause DachiPool when speaking
   useEffect(() => {
