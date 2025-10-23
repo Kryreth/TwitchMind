@@ -1,9 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Activity, MessageSquare, Clock, Zap } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Activity, MessageSquare, Clock, Zap, Mic, MicOff, Volume2, VolumeX, Play, Pause, Rocket, ExternalLink, Users } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ChatMessage } from "@shared/schema";
 
 type DachiStreamStatus = "idle" | "collecting" | "processing" | "selecting_message" | "building_context" | "waiting_for_ai" | "disabled" | "paused";
@@ -24,6 +31,21 @@ interface DachiStreamState {
   selectedMessage: ChatMessage | null;
   aiResponse: string | null;
   error: string | null;
+}
+
+interface VIPStream {
+  id: string;
+  user_id: string;
+  user_login: string;
+  user_name: string;
+  game_id: string;
+  game_name: string;
+  type: string;
+  title: string;
+  viewer_count: number;
+  started_at: string;
+  language: string;
+  thumbnail_url: string;
 }
 
 const statusColors: Record<DachiStreamStatus, string> = {
@@ -58,6 +80,13 @@ const logTypeColors: Record<DachiStreamLog["type"], string> = {
 };
 
 export default function Monitor() {
+  const { toast } = useToast();
+  const [selectedStream, setSelectedStream] = useState<VIPStream | null>(null);
+  const [streamMuted, setStreamMuted] = useState(true);
+  const [micMuted, setMicMuted] = useState(true);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [dachipoolPaused, setDachipoolPaused] = useState(false);
+
   const { data: state, isLoading: stateLoading } = useQuery<DachiStreamState>({
     queryKey: ["/api/dachistream/status"],
     refetchInterval: 1000,
@@ -73,7 +102,39 @@ export default function Monitor() {
     refetchInterval: 1000,
   });
 
+  const { data: vipStreams = [], isLoading: vipStreamsLoading } = useQuery<VIPStream[]>({
+    queryKey: ["/api/users/vips/streams"],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   const aiResponseLogs = logs.filter(log => log.type === "ai_response");
+
+  const handleRaid = async (stream: VIPStream) => {
+    try {
+      await apiRequest("/api/raids/start", {
+        method: "POST",
+        body: JSON.stringify({ toUsername: stream.user_login }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      toast({
+        title: "Raid Started!",
+        description: `Raiding ${stream.user_name} with your viewers!`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/raids"] });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Raid Failed",
+        description: error.message || "Failed to start raid",
+      });
+    }
+  };
+
+  const getStreamEmbedUrl = (stream: VIPStream) => {
+    return `https://player.twitch.tv/?channel=${stream.user_login}&parent=${window.location.hostname}&muted=${streamMuted}`;
+  };
 
   return (
     <div className="h-full overflow-auto" data-testid="page-monitor">
@@ -82,6 +143,147 @@ export default function Monitor() {
           <h1 className="text-3xl font-bold">DachiStream Monitor</h1>
           <p className="text-muted-foreground">Real-time debugging and monitoring</p>
         </div>
+
+        {/* Voice & DachiPool Controls */}
+        <Card data-testid="card-voice-controls">
+          <CardHeader>
+            <CardTitle>DachiStream Controls</CardTitle>
+            <CardDescription>Voice and AI controls for stream assistance</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-6">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="mic-mute"
+                checked={!micMuted}
+                onCheckedChange={(checked) => setMicMuted(!checked)}
+                data-testid="toggle-mic"
+              />
+              <Label htmlFor="mic-mute" className="flex items-center gap-2 cursor-pointer">
+                {micMuted ? <MicOff className="h-4 w-4 text-muted-foreground" /> : <Mic className="h-4 w-4 text-primary" />}
+                <span>{micMuted ? "Mic Muted" : "Mic Active"}</span>
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="tts-enabled"
+                checked={ttsEnabled}
+                onCheckedChange={setTtsEnabled}
+                data-testid="toggle-tts"
+              />
+              <Label htmlFor="tts-enabled" className="flex items-center gap-2 cursor-pointer">
+                {ttsEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+                <span>TTS AI {ttsEnabled ? "On" : "Off"}</span>
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="dachipool-pause"
+                checked={dachipoolPaused}
+                onCheckedChange={setDachipoolPaused}
+                data-testid="toggle-dachipool"
+              />
+              <Label htmlFor="dachipool-pause" className="flex items-center gap-2 cursor-pointer">
+                {dachipoolPaused ? <Pause className="h-4 w-4 text-muted-foreground" /> : <Play className="h-4 w-4 text-primary" />}
+                <span>DachiPool {dachipoolPaused ? "Paused" : "Active"}</span>
+              </Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* VIP Raid List */}
+        {vipStreams.length > 0 && (
+          <Card data-testid="card-vip-streams">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                VIP Streams Online
+              </CardTitle>
+              <CardDescription>Your VIPs who are currently live</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-3">
+                  {vipStreams.map((stream) => (
+                    <div
+                      key={stream.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-card border hover-elevate"
+                      data-testid={`vip-stream-${stream.user_id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-foreground">{stream.user_name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse mr-1" />
+                            LIVE
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {stream.viewer_count.toLocaleString()} viewers
+                          </span>
+                          <span className="truncate">{stream.game_name}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedStream(stream)}
+                          data-testid={`button-view-stream-${stream.user_id}`}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleRaid(stream)}
+                          data-testid={`button-raid-stream-${stream.user_id}`}
+                        >
+                          <Rocket className="h-4 w-4 mr-1" />
+                          Raid
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Stream Player Dialog */}
+        <Dialog open={!!selectedStream} onOpenChange={() => setSelectedStream(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>{selectedStream?.user_name}'s Stream</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setStreamMuted(!streamMuted)}
+                    data-testid="button-toggle-stream-audio"
+                  >
+                    {streamMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+            {selectedStream && (
+              <div className="aspect-video w-full">
+                <iframe
+                  src={getStreamEmbedUrl(selectedStream)}
+                  className="w-full h-full rounded-md"
+                  allowFullScreen
+                  title={`${selectedStream.user_name}'s stream`}
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card data-testid="card-status">

@@ -19,6 +19,11 @@ const menuItems = [
     icon: ChartBarIcon,
   },
   {
+    title: "Monitor",
+    url: "/monitor",
+    icon: Square3Stack3DIcon,
+  },
+  {
     title: "Live Chat",
     url: "/live-chat",
     icon: ChatBubbleLeftRightIcon,
@@ -47,11 +52,6 @@ const menuItems = [
     title: "Raid Management",
     url: "/raid-management",
     icon: RocketLaunchIcon,
-  },
-  {
-    title: "Monitor",
-    url: "/monitor",
-    icon: Square3Stack3DIcon,
   },
   {
     title: "Settings",

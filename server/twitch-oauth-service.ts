@@ -13,6 +13,23 @@ export interface TwitchUser {
   email?: string;
 }
 
+export interface TwitchStream {
+  id: string;
+  user_id: string;
+  user_login: string;
+  user_name: string;
+  game_id: string;
+  game_name: string;
+  type: string;
+  title: string;
+  viewer_count: number;
+  started_at: string;
+  language: string;
+  thumbnail_url: string;
+  tag_ids: string[];
+  is_mature: boolean;
+}
+
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID || '';
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || '';
 const REDIRECT_URI = process.env.REPLIT_DEV_DOMAIN 
@@ -279,6 +296,48 @@ export class TwitchOAuthService {
       display_name: user.display_name,
       profile_image_url: user.profile_image_url,
     };
+  }
+
+  /**
+   * Gets stream information for multiple user IDs
+   * Returns only streams that are currently live
+   */
+  async getStreams(userIds: string[]): Promise<TwitchStream[]> {
+    if (!userIds || userIds.length === 0) {
+      return [];
+    }
+
+    const appToken = await this.getAppAccessToken();
+
+    // Twitch API allows up to 100 user IDs per request
+    const chunks = [];
+    for (let i = 0; i < userIds.length; i += 100) {
+      chunks.push(userIds.slice(i, i + 100));
+    }
+
+    const allStreams: TwitchStream[] = [];
+
+    for (const chunk of chunks) {
+      const params = chunk.map(id => `user_id=${encodeURIComponent(id)}`).join('&');
+      const response = await fetch(`https://api.twitch.tv/helix/streams?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${appToken}`,
+          'Client-Id': TWITCH_CLIENT_ID,
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch streams:', await response.text());
+        continue;
+      }
+
+      const data = await response.json();
+      if (data.data && Array.isArray(data.data)) {
+        allStreams.push(...data.data);
+      }
+    }
+
+    return allStreams;
   }
 }
 

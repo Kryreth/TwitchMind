@@ -124,6 +124,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/vips/streams", async (req, res) => {
+    try {
+      const vips = await storage.getVipUsers();
+      const vipUserIds = vips.map(vip => vip.userId);
+      
+      if (vipUserIds.length === 0) {
+        return res.json([]);
+      }
+
+      const streams = await twitchOAuthService.getStreams(vipUserIds);
+      
+      res.json(streams);
+    } catch (error) {
+      console.error("Error fetching VIP streams:", error);
+      res.status(500).json({ error: "Failed to fetch VIP streams" });
+    }
+  });
+
   app.get("/api/users/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
