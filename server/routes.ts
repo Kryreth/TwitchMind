@@ -442,6 +442,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Raid Management
+  app.get("/api/raids", async (req, res) => {
+    try {
+      const raids = await storage.getRaids(50);
+      res.json(raids);
+    } catch (error) {
+      console.error("Error fetching raids:", error);
+      res.status(500).json({ error: "Failed to fetch raids" });
+    }
+  });
+
+  app.post("/api/raids/start", async (req, res) => {
+    try {
+      const { toUsername } = req.body;
+      
+      if (!toUsername) {
+        return res.status(400).json({ error: "Target username is required" });
+      }
+
+      // Get authenticated user
+      const user = await storage.getAuthenticatedUser();
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      // Get target user info
+      const targetUser = await twitchOAuthService.getUserByUsername(toUsername);
+      if (!targetUser) {
+        return res.status(404).json({ error: "Target user not found" });
+      }
+
+      // Start the raid
+      const success = await twitchOAuthService.startRaid(
+        user.twitchUserId,
+        targetUser.id,
+        user.accessToken
+      );
+
+      if (success) {
+        res.json({ success: true, message: `Raid started to ${toUsername}` });
+      } else {
+        res.status(500).json({ error: "Failed to start raid" });
+      }
+    } catch (error) {
+      console.error("Error starting raid:", error);
+      res.status(500).json({ error: "Failed to start raid" });
+    }
+  });
+
+  // Browser Source
+  app.post("/api/browser-source/generate", async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      if (settings.length === 0) {
+        return res.status(404).json({ error: "Settings not found" });
+      }
+
+      const token = await storage.generateBrowserSourceToken(settings[0].id);
+      const domain = process.env.REPLIT_DEV_DOMAIN || 'localhost:5000';
+      const protocol = process.env.REPLIT_DEV_DOMAIN ? 'https' : 'http';
+      const url = `${protocol}://${domain}/browser-source/${token}`;
+
+      res.json({ token, url });
+    } catch (error) {
+      console.error("Error generating browser source token:", error);
+      res.status(500).json({ error: "Failed to generate browser source token" });
+    }
+  });
+
+  app.post("/api/browser-source/toggle", async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      const settings = await storage.getSettings();
+      
+      if (settings.length === 0) {
+        return res.status(404).json({ error: "Settings not found" });
+      }
+
+      const updated = await storage.updateSettings(settings[0].id, {
+        browserSourceEnabled: enabled,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error toggling browser source:", error);
+      res.status(500).json({ error: "Failed to toggle browser source" });
+    }
+  });
+
   // DachiStream Controls - imported from index.ts where service is initialized
   app.post("/api/dachistream/pause", async (req, res) => {
     try {
@@ -552,6 +641,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error cleaning up speech:", error);
       res.status(500).json({ error: "Failed to clean up speech" });
+    }
+  });
+
+  // Browser Source HTML Page for OBS
+  app.get("/browser-source/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      // Verify token
+      const settings = await storage.getBrowserSourceSettings(token);
+      if (!settings || !settings.browserSourceEnabled) {
+        return res.status(404).send("Browser source not found or disabled");
+      }
+
+      const domain = process.env.REPLIT_DEV_DOMAIN || 'localhost:5000';
+      const wsProtocol = process.env.REPLIT_DEV_DOMAIN ? 'wss' : 'ws';
+      
+      // Serve HTML page with WebSocket connection for live shoutouts
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamDachi VIP Shoutouts</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: transparent;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    
+    #shoutout-container {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      max-width: 600px;
+      opacity: 0;
+      transform: translateY(100px);
+      transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    
+    #shoutout-container.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .shoutout {
+      background: linear-gradient(135deg, #6441a5 0%, #9146ff 100%);
+      padding: 20px 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(148, 70, 255, 0.5);
+      color: white;
+      font-size: 24px;
+      font-weight: 600;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .vip-icon {
+      display: inline-block;
+      margin-right: 10px;
+      font-size: 28px;
+      animation: bounce 1s infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="shoutout-container">
+    <div class="shoutout">
+      <span class="vip-icon">🎉</span>
+      <span id="shoutout-text"></span>
+      <span class="vip-icon">💜</span>
+    </div>
+  </div>
+
+  <script>
+    const ws = new WebSocket('${wsProtocol}://${domain}/ws');
+    const container = document.getElementById('shoutout-container');
+    const text = document.getElementById('shoutout-text');
+    let hideTimeout;
+    
+    ws.onopen = () => {
+      console.log('Connected to StreamDachi');
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Listen for auto_shoutout events
+        if (data.event === 'auto_shoutout') {
+          showShoutout(data.data.username);
+        }
+      } catch (error) {
+        console.error('Error parsing message:', error);
+      }
+    };
+    
+    function showShoutout(username) {
+      // Clear any existing timeout
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+      
+      // Update text and show
+      text.textContent = \`Welcome VIP @\${username}! Thanks for being amazing!\`;
+      container.classList.add('show');
+      
+      // Hide after 5 seconds
+      hideTimeout = setTimeout(() => {
+        container.classList.remove('show');
+      }, 5000);
+    }
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('Disconnected from StreamDachi');
+      // Attempt reconnection after 3 seconds
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    };
+  </script>
+</body>
+</html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error serving browser source:", error);
+      res.status(500).send("Internal server error");
     }
   });
 
