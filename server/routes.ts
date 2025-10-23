@@ -595,66 +595,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to resume DachiStream" });
     }
   });
-
-
-  // ElevenLabs TTS - imported from index.ts where service is initialized
-  app.post("/api/tts/generate", async (req, res) => {
-    try {
-      const { text, voiceId } = req.body;
-      if (!text) {
-        return res.status(400).json({ error: "Text is required" });
-      }
-      
-      // This will be handled by the ElevenLabs service instance in index.ts
-      res.json({
-        success: true,
-        message: "TTS generation endpoint ready",
-      });
-    } catch (error) {
-      console.error("Error generating TTS:", error);
-      res.status(500).json({ error: "Failed to generate TTS" });
-    }
-  });
-
-  // ElevenLabs usage endpoint (alias for frontend convenience)
-  app.get("/api/elevenlabs/usage", async (req, res) => {
-    try {
-      const elevenLabsService = (req.app as any).elevenLabsService;
-      if (!elevenLabsService) {
-        return res.json({
-          characterCount: 0,
-          characterLimit: 10000,
-          quotaRemaining: 10000,
-        });
-      }
-      const usage = await elevenLabsService.getUsage();
-      // Transform the service response to match frontend expectations
-      res.json({
-        characterCount: usage.characterCount || 0,
-        characterLimit: usage.characterLimit || 10000,
-        quotaRemaining: (usage.characterLimit || 10000) - (usage.characterCount || 0),
-      });
-    } catch (error) {
-      console.error("Error fetching ElevenLabs usage:", error);
-      res.status(500).json({ error: "Failed to fetch usage" });
-    }
-  });
-
-  app.get("/api/tts/usage", async (req, res) => {
-    try {
-      // This will be handled by the ElevenLabs service instance in index.ts
-      res.json({
-        characterCount: 0,
-        characterLimit: 0,
-        percentUsed: 0,
-        warningTriggered: false,
-      });
-    } catch (error) {
-      console.error("Error fetching TTS usage:", error);
-      res.status(500).json({ error: "Failed to fetch TTS usage" });
-    }
-  });
-
   // Speech-to-Text for Streamer Voice
   app.post("/api/stt/transcribe", async (req, res) => {
     try {
@@ -939,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Text is required" });
       }
 
-      const { enhanceSpeechForChat } = await import("./openai-service");
+      const { enhanceSpeechForChat } = await import("./groq-service");
       const result = await enhanceSpeechForChat(text);
       
       res.json(result);

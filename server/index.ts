@@ -3,9 +3,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startAiLearning } from "./ai-learning-service";
 import { DachiStreamService } from "./dachistream-service";
-import { ElevenLabsService } from "./elevenlabs-service";
 import { storage } from "./storage";
-import { generateDachiStreamResponse } from "./openai-service";
+import { generateDachiStreamResponse } from "./groq-service";
 import { setDachiStreamService } from "./twitch-client";
 
 const app = express();
@@ -66,16 +65,14 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  // Initialize DachiStream and ElevenLabs services
+  // Initialize DachiStream service
   const dachiStreamService = new DachiStreamService(storage);
-  const elevenLabsService = new ElevenLabsService(storage);
 
   // Connect DachiStream service to Twitch client
   setDachiStreamService(dachiStreamService);
 
   // Export services for use in routes
   (app as any).dachiStreamService = dachiStreamService;
-  (app as any).elevenLabsService = elevenLabsService;
 
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
@@ -130,16 +127,6 @@ app.use((req, res, next) => {
                   console.error("✗ Failed to send AI response to Twitch chat");
                 }
               }
-              
-              // Generate TTS if enabled
-              if (settings.audioAiVoiceActive && settings.dachipoolElevenlabsEnabled) {
-                const ttsResult = await elevenLabsService.generateTTS(aiResponse);
-                if (ttsResult.audio) {
-                  console.log("TTS audio generated successfully");
-                } else if (ttsResult.skipped) {
-                  console.log(`TTS skipped: ${ttsResult.reason}`);
-                }
-              }
             }
           }
         } catch (error) {
@@ -150,10 +137,5 @@ app.use((req, res, next) => {
         // Status updates are handled internally, no need for additional broadcast here
       }
     );
-
-    // Start ElevenLabs usage polling
-    elevenLabsService.startUsagePolling().catch(error => {
-      console.error("Failed to start ElevenLabs usage polling:", error);
-    });
   });
 })();

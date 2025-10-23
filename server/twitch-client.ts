@@ -1,6 +1,6 @@
 import tmi from "tmi.js";
 import { storage } from "./storage";
-import { analyzeChatMessage, generateAiResponse } from "./openai-service";
+import { analyzeChatMessage, generateAiResponse } from "./groq-service";
 import { WebSocket } from "ws";
 import type { DachiStreamService } from "./dachistream-service";
 import { twitchOAuthService } from "./twitch-oauth-service";

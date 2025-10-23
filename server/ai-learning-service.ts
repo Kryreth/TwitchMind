@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { generateAiResponse } from "./openai-service";
+import { generateAiResponse } from "./groq-service";
 
 let learningInterval: NodeJS.Timeout | null = null;
 
