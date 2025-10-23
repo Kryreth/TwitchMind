@@ -37,8 +37,12 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
   const [transcript, setTranscript] = useState("");
   const [enhancedText, setEnhancedText] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
+  
   const recognitionRef = useRef<any>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shouldBeListeningRef = useRef(false);
+  const accumulatedTranscriptRef = useRef("");
+  const lastSpeechTimeRef = useRef<number>(0);
 
   // Check if browser supports speech recognition
   const isSupported = typeof window !== "undefined" && 
@@ -47,6 +51,7 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
   const enhanceSpeech = useCallback(async (text: string) => {
     if (!text.trim()) return;
 
+    console.log("Enhancing speech:", text);
     setIsEnhancing(true);
     try {
       const response = await apiRequest("POST", "/api/voice/enhance", { text });
@@ -62,33 +67,55 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
   }, [onEnhanced, onError]);
 
   const startListening = useCallback(() => {
-    if (!isSupported || !recognitionRef.current || isListening) return;
+    if (!isSupported || !recognitionRef.current) return;
 
+    console.log("User clicked start listening");
+    shouldBeListeningRef.current = true;
+    accumulatedTranscriptRef.current = "";
+    setTranscript("");
+    setEnhancedText("");
+    
     try {
       recognitionRef.current.start();
       setIsListening(true);
       onStart?.();
     } catch (error: any) {
       console.error("Failed to start recognition:", error);
-      onError?.("Failed to start voice recognition");
+      if (error.message && error.message.includes("already started")) {
+        // Already running, just update state
+        setIsListening(true);
+      } else {
+        onError?.("Failed to start voice recognition");
+      }
     }
-  }, [isSupported, isListening, onStart, onError]);
+  }, [isSupported, onStart, onError]);
 
   const stopListening = useCallback(() => {
-    if (!recognitionRef.current || !isListening) return;
-
-    try {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      onEnd?.();
-    } catch (error: any) {
-      console.error("Failed to stop recognition:", error);
+    console.log("User clicked stop listening");
+    shouldBeListeningRef.current = false;
+    
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error: any) {
+        console.error("Failed to stop recognition:", error);
+      }
     }
-  }, [isListening, onEnd]);
+    
+    // Clear silence timeout
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    
+    setIsListening(false);
+    onEnd?.();
+  }, [onEnd]);
 
   const resetTranscript = useCallback(() => {
     setTranscript("");
     setEnhancedText("");
+    accumulatedTranscriptRef.current = "";
   }, []);
 
   useEffect(() => {
@@ -97,17 +124,17 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
-    recognition.continuous = continuous;
+    recognition.continuous = false; // Set to false so we can auto-restart
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
     recognition.onstart = () => {
-      console.log("Voice recognition started");
+      console.log("Browser voice recognition started");
     };
 
     recognition.onresult = (event: any) => {
-      let interimTranscript = "";
       let finalTranscript = "";
+      let interimTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
@@ -118,49 +145,84 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
         }
       }
 
-      const currentTranscript = (finalTranscript + interimTranscript).trim();
+      // Update accumulated transcript with final results
+      if (finalTranscript) {
+        accumulatedTranscriptRef.current += finalTranscript;
+        lastSpeechTimeRef.current = Date.now();
+        console.log("Got final speech:", finalTranscript);
+      }
+
+      // Display accumulated + interim
+      const currentTranscript = (accumulatedTranscriptRef.current + interimTranscript).trim();
       setTranscript(currentTranscript);
       onTranscript?.(currentTranscript);
 
-      // Clear existing timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      // Clear existing silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
       }
 
-      // Wait 5 seconds of silence before sending to AI
-      // Only set timeout if we have any transcript
-      if (currentTranscript.trim() && autoEnhance) {
-        console.log("Setting 5-second timeout for AI rephrasing:", currentTranscript);
-        timeoutRef.current = setTimeout(() => {
-          console.log("5 seconds passed - calling AI to rephrase:", currentTranscript);
-          enhanceSpeech(currentTranscript.trim());
+      // Set new silence timeout (5 seconds after last speech)
+      if (currentTranscript.trim() && autoEnhance && shouldBeListeningRef.current) {
+        console.log("Resetting 5-second silence timer");
+        silenceTimeoutRef.current = setTimeout(() => {
+          const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current;
+          console.log(`Silence detected (${timeSinceLastSpeech}ms since last speech) - rephrasing:`, accumulatedTranscriptRef.current.trim());
+          enhanceSpeech(accumulatedTranscriptRef.current.trim());
         }, 5000);
       }
     };
 
     recognition.onerror = (event: any) => {
       console.error("Voice recognition error:", event.error);
-      setIsListening(false);
-      onError?.(event.error);
+      
+      // Don't treat "no-speech" as a fatal error if we're meant to be listening
+      if (event.error === "no-speech" && shouldBeListeningRef.current) {
+        console.log("No speech detected, will auto-restart");
+        return;
+      }
+      
+      if (event.error !== "aborted") {
+        onError?.(event.error);
+      }
     };
 
     recognition.onend = () => {
-      console.log("Voice recognition ended");
-      setIsListening(false);
-      onEnd?.();
+      console.log("Browser voice recognition ended");
+      
+      // Auto-restart if user still wants to be listening
+      if (shouldBeListeningRef.current) {
+        console.log("Auto-restarting voice recognition...");
+        setTimeout(() => {
+          if (shouldBeListeningRef.current) {
+            try {
+              recognition.start();
+            } catch (error: any) {
+              console.error("Failed to auto-restart:", error);
+            }
+          }
+        }, 100); // Small delay to avoid rapid restart issues
+      } else {
+        setIsListening(false);
+      }
     };
 
     recognitionRef.current = recognition;
 
     return () => {
+      shouldBeListeningRef.current = false;
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
       }
     };
-  }, [isSupported, continuous, autoEnhance, onTranscript, onError, onEnd, enhanceSpeech]);
+  }, [isSupported, continuous, autoEnhance, onTranscript, onError, enhanceSpeech]);
 
   return {
     isListening,
