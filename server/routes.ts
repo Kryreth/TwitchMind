@@ -913,5 +913,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Voice Enhancement API
+  app.post("/api/voice/enhance", async (req, res) => {
+    try {
+      const { text } = req.body;
+      
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      const { enhanceSpeechForChat } = await import("./openai-service");
+      const result = await enhanceSpeechForChat(text);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error enhancing speech:", error);
+      res.status(500).json({ error: "Failed to enhance speech" });
+    }
+  });
+
   return httpServer;
 }

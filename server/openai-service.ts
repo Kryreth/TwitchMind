@@ -11,6 +11,11 @@ export interface SentimentAnalysisResult {
   categories: string[];
 }
 
+export interface EnhancedSpeechResult {
+  original: string;
+  enhanced: string;
+}
+
 export async function analyzeChatMessage(message: string): Promise<SentimentAnalysisResult> {
   try {
     const response = await groq.chat.completions.create({
@@ -231,5 +236,44 @@ export async function cleanupSpeechText(rawText: string): Promise<string> {
   } catch (error) {
     console.error("Error cleaning up speech text:", error);
     return rawText;
+  }
+}
+
+export async function enhanceSpeechForChat(rawText: string): Promise<EnhancedSpeechResult> {
+  try {
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a speech enhancement assistant that helps streamers communicate better in chat. " +
+            "Take their raw spoken words (which may have stutters, filler words, or unclear phrasing) " +
+            "and transform them into a polished, natural-sounding message that preserves their intent and personality. " +
+            "Add a touch of personality and warmth while keeping it authentic. " +
+            "Keep it concise (under 200 characters if possible). " +
+            "Output only the enhanced message, nothing else.",
+        },
+        {
+          role: "user",
+          content: `Enhance this spoken message for Twitch chat: "${rawText}"`,
+        },
+      ],
+      max_tokens: 100,
+      temperature: 0.7,
+    });
+
+    const enhanced = response.choices[0].message.content || rawText;
+
+    return {
+      original: rawText,
+      enhanced: enhanced.trim(),
+    };
+  } catch (error) {
+    console.error("Error enhancing speech:", error);
+    return {
+      original: rawText,
+      enhanced: rawText,
+    };
   }
 }

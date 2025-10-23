@@ -6,11 +6,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Activity, MessageSquare, Clock, Zap, Mic, MicOff, Volume2, VolumeX, Play, Pause, Rocket, ExternalLink, Users } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Activity, MessageSquare, Clock, Zap, Mic, MicOff, Volume2, VolumeX, Play, Pause, Rocket, ExternalLink, Users, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
 import type { ChatMessage } from "@shared/schema";
 
 type DachiStreamStatus = "idle" | "collecting" | "processing" | "selecting_message" | "building_context" | "waiting_for_ai" | "disabled" | "paused";
@@ -83,9 +85,52 @@ export default function Monitor() {
   const { toast } = useToast();
   const [selectedStream, setSelectedStream] = useState<VIPStream | null>(null);
   const [streamMuted, setStreamMuted] = useState(true);
-  const [micMuted, setMicMuted] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [dachipoolPaused, setDachipoolPaused] = useState(false);
+
+  const {
+    isListening,
+    transcript,
+    enhancedText,
+    startListening,
+    stopListening,
+    resetTranscript,
+    isSupported: voiceSupported,
+    isEnhancing,
+  } = useVoiceRecognition({
+    onEnhanced: (original, enhanced) => {
+      toast({
+        title: "Speech Enhanced!",
+        description: `"${enhanced}"`,
+        duration: 5000,
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Voice Error",
+        description: error,
+      });
+    },
+    autoEnhance: true,
+    continuous: false,
+  });
+
+  // Auto-pause DachiPool when speaking
+  useEffect(() => {
+    if (isListening && !dachipoolPaused) {
+      setDachipoolPaused(true);
+    }
+  }, [isListening, dachipoolPaused]);
+
+  const toggleMic = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      startListening();
+    }
+  };
 
   const { data: state, isLoading: stateLoading } = useQuery<DachiStreamState>({
     queryKey: ["/api/dachistream/status"],
@@ -111,11 +156,7 @@ export default function Monitor() {
 
   const handleRaid = async (stream: VIPStream) => {
     try {
-      await apiRequest("/api/raids/start", {
-        method: "POST",
-        body: JSON.stringify({ toUsername: stream.user_login }),
-        headers: { "Content-Type": "application/json" },
-      });
+      await apiRequest("POST", "/api/raids/start", { toUsername: stream.user_login });
 
       toast({
         title: "Raid Started!",
@@ -148,47 +189,110 @@ export default function Monitor() {
         <Card data-testid="card-voice-controls">
           <CardHeader>
             <CardTitle>DachiStream Controls</CardTitle>
-            <CardDescription>Voice and AI controls for stream assistance</CardDescription>
+            <CardDescription>
+              {voiceSupported 
+                ? "Voice assistance - Speak into your mic and AI will enhance your message"
+                : "Voice recognition not supported in this browser"}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-6">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="mic-mute"
-                checked={!micMuted}
-                onCheckedChange={(checked) => setMicMuted(!checked)}
-                data-testid="toggle-mic"
-              />
-              <Label htmlFor="mic-mute" className="flex items-center gap-2 cursor-pointer">
-                {micMuted ? <MicOff className="h-4 w-4 text-muted-foreground" /> : <Mic className="h-4 w-4 text-primary" />}
-                <span>{micMuted ? "Mic Muted" : "Mic Active"}</span>
-              </Label>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-6">
+              <Button
+                variant={isListening ? "default" : "outline"}
+                size="default"
+                onClick={toggleMic}
+                disabled={!voiceSupported}
+                data-testid="button-toggle-mic"
+                className="min-w-[140px]"
+              >
+                {isListening ? (
+                  <>
+                    <Mic className="h-4 w-4 mr-2 animate-pulse" />
+                    Listening...
+                  </>
+                ) : (
+                  <>
+                    <MicOff className="h-4 w-4 mr-2" />
+                    Start Speaking
+                  </>
+                )}
+              </Button>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="tts-enabled"
+                  checked={ttsEnabled}
+                  onCheckedChange={setTtsEnabled}
+                  data-testid="toggle-tts"
+                />
+                <Label htmlFor="tts-enabled" className="flex items-center gap-2 cursor-pointer">
+                  {ttsEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+                  <span>TTS AI {ttsEnabled ? "On" : "Off"}</span>
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="dachipool-pause"
+                  checked={dachipoolPaused}
+                  onCheckedChange={setDachipoolPaused}
+                  data-testid="toggle-dachipool"
+                />
+                <Label htmlFor="dachipool-pause" className="flex items-center gap-2 cursor-pointer">
+                  {dachipoolPaused ? <Pause className="h-4 w-4 text-muted-foreground" /> : <Play className="h-4 w-4 text-primary" />}
+                  <span>DachiPool {dachipoolPaused ? "Paused" : "Active"}</span>
+                </Label>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="tts-enabled"
-                checked={ttsEnabled}
-                onCheckedChange={setTtsEnabled}
-                data-testid="toggle-tts"
-              />
-              <Label htmlFor="tts-enabled" className="flex items-center gap-2 cursor-pointer">
-                {ttsEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
-                <span>TTS AI {ttsEnabled ? "On" : "Off"}</span>
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="dachipool-pause"
-                checked={dachipoolPaused}
-                onCheckedChange={setDachipoolPaused}
-                data-testid="toggle-dachipool"
-              />
-              <Label htmlFor="dachipool-pause" className="flex items-center gap-2 cursor-pointer">
-                {dachipoolPaused ? <Pause className="h-4 w-4 text-muted-foreground" /> : <Play className="h-4 w-4 text-primary" />}
-                <span>DachiPool {dachipoolPaused ? "Paused" : "Active"}</span>
-              </Label>
-            </div>
+            {/* Voice Transcription Display */}
+            {(transcript || enhancedText) && (
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                {transcript && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Original Transcription:</Label>
+                    <Textarea
+                      value={transcript}
+                      readOnly
+                      className="mt-1 min-h-[60px] resize-none"
+                      data-testid="text-transcript"
+                    />
+                  </div>
+                )}
+                {isEnhancing && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>AI is enhancing your message...</span>
+                  </div>
+                )}
+                {enhancedText && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">AI Enhanced Message:</Label>
+                    <Textarea
+                      value={enhancedText}
+                      readOnly
+                      className="mt-1 min-h-[60px] resize-none bg-primary/10 border-primary/20"
+                      data-testid="text-enhanced"
+                    />
+                  </div>
+                )}
+                {enhancedText && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(enhancedText);
+                      toast({
+                        title: "Copied!",
+                        description: "Enhanced message copied to clipboard",
+                      });
+                    }}
+                    data-testid="button-copy-enhanced"
+                  >
+                    Copy Enhanced Message
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
