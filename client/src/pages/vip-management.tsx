@@ -11,15 +11,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { UserProfile } from "@shared/schema";
 
-interface ActiveChatter {
-  username: string;
-  displayName: string;
-  userId: string;
-  lastMessageTime: Date;
-  messageCount: number;
-  isVip: boolean;
-  isMod: boolean;
-  isSubscriber: boolean;
+interface TwitchSearchUser {
+  id: string;
+  login: string;
+  display_name: string;
+  profile_image_url: string;
 }
 
 export default function VIPManagement() {
@@ -36,9 +32,9 @@ export default function VIPManagement() {
     queryKey: ["/api/settings"],
   });
 
-  const { data: suggestions = [] } = useQuery<ActiveChatter[]>({
-    queryKey: ["/api/chatters/search", searchQuery],
-    enabled: searchQuery.length > 0 && showSuggestions,
+  const { data: suggestions = [] } = useQuery<TwitchSearchUser[]>({
+    queryKey: ["/api/twitch/search-users", { query: searchQuery }],
+    enabled: searchQuery.length > 1 && showSuggestions,
   });
 
   useEffect(() => {
@@ -167,7 +163,7 @@ export default function VIPManagement() {
               <PopoverTrigger asChild>
                 <div className="flex-1 relative">
                   <Input
-                    placeholder="Enter username or search active chatters..."
+                    placeholder="Search Twitch users..."
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}
@@ -187,28 +183,27 @@ export default function VIPManagement() {
               <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
                   <CommandList>
-                    <CommandEmpty>No active chatters found</CommandEmpty>
-                    <CommandGroup heading="Active Chatters">
-                      {suggestions.map((chatter) => (
+                    <CommandEmpty>No Twitch users found</CommandEmpty>
+                    <CommandGroup heading="Twitch Users">
+                      {suggestions.map((user) => (
                         <CommandItem
-                          key={chatter.userId}
-                          value={chatter.username}
+                          key={user.id}
+                          value={user.login}
                           onSelect={() => {
-                            setNewUsername(chatter.username);
+                            setNewUsername(user.login);
                             setShowSuggestions(false);
                           }}
-                          data-testid={`suggestion-${chatter.username}`}
+                          data-testid={`suggestion-${user.login}`}
                         >
                           <div className="flex items-center justify-between w-full">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{chatter.username}</span>
-                              {chatter.isMod && <Badge variant="secondary">Mod</Badge>}
-                              {chatter.isSubscriber && <Badge variant="secondary">Sub</Badge>}
-                              {chatter.isVip && <Badge>VIP</Badge>}
+                              <span className="font-medium">{user.login}</span>
+                              {user.display_name !== user.login && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({user.display_name})
+                                </span>
+                              )}
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {chatter.messageCount} messages
-                            </span>
                           </div>
                         </CommandItem>
                       ))}
