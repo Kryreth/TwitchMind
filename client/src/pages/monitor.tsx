@@ -100,7 +100,7 @@ export default function Monitor() {
   } = useVoiceRecognition({
     onEnhanced: (original, enhanced) => {
       toast({
-        title: "Speech Enhanced!",
+        title: "Text Rephrased!",
         description: `"${enhanced}"`,
         duration: 5000,
       });
@@ -113,7 +113,7 @@ export default function Monitor() {
       });
     },
     autoEnhance: true,
-    continuous: false,
+    continuous: true,
   });
 
   // Auto-pause DachiPool when speaking
@@ -191,7 +191,7 @@ export default function Monitor() {
             <CardTitle>DachiStream Controls</CardTitle>
             <CardDescription>
               {voiceSupported 
-                ? "Voice assistance - Speak into your mic and AI will enhance your message"
+                ? "Voice-to-text with AI rephrasing - Pauses DachiStream while you speak"
                 : "Voice recognition not supported in this browser"}
             </CardDescription>
           </CardHeader>
@@ -250,7 +250,7 @@ export default function Monitor() {
               <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
                 {transcript && (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Original Transcription:</Label>
+                    <Label className="text-xs text-muted-foreground">What You Said:</Label>
                     <Textarea
                       value={transcript}
                       readOnly
@@ -262,12 +262,12 @@ export default function Monitor() {
                 {isEnhancing && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>AI is enhancing your message...</span>
+                    <span>AI is rephrasing (5 sec after you stop speaking)...</span>
                   </div>
                 )}
                 {enhancedText && (
                   <div>
-                    <Label className="text-xs text-muted-foreground">AI Enhanced Message:</Label>
+                    <Label className="text-xs text-muted-foreground">AI Rephrased (Same Meaning, Different Words):</Label>
                     <Textarea
                       value={enhancedText}
                       readOnly
@@ -283,12 +283,12 @@ export default function Monitor() {
                       navigator.clipboard.writeText(enhancedText);
                       toast({
                         title: "Copied!",
-                        description: "Enhanced message copied to clipboard",
+                        description: "Rephrased text copied to clipboard",
                       });
                     }}
                     data-testid="button-copy-enhanced"
                   >
-                    Copy Enhanced Message
+                    Copy Rephrased Text
                   </Button>
                 )}
               </div>

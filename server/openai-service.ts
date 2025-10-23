@@ -242,25 +242,23 @@ export async function cleanupSpeechText(rawText: string): Promise<string> {
 export async function enhanceSpeechForChat(rawText: string): Promise<EnhancedSpeechResult> {
   try {
     const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       messages: [
         {
           role: "system",
           content:
-            "You are a speech enhancement assistant that helps streamers communicate better in chat. " +
-            "Take their raw spoken words (which may have stutters, filler words, or unclear phrasing) " +
-            "and transform them into a polished, natural-sounding message that preserves their intent and personality. " +
-            "Add a touch of personality and warmth while keeping it authentic. " +
-            "Keep it concise (under 200 characters if possible). " +
-            "Output only the enhanced message, nothing else.",
+            "Rephrase the spoken text to say the same thing in different words. " +
+            "Remove stutters and filler words (um, uh, like). " +
+            "Keep the EXACT same meaning and tone. Do NOT add personality or change the message. " +
+            "Output only the rephrased text, nothing else.",
         },
         {
           role: "user",
-          content: `Enhance this spoken message for Twitch chat: "${rawText}"`,
+          content: rawText,
         },
       ],
-      max_tokens: 100,
-      temperature: 0.7,
+      max_tokens: 150,
+      temperature: 0.3,
     });
 
     const enhanced = response.choices[0].message.content || rawText;

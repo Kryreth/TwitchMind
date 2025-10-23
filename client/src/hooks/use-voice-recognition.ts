@@ -127,11 +127,11 @@ export function useVoiceRecognition(options: VoiceRecognitionOptions = {}): UseV
         clearTimeout(timeoutRef.current);
       }
 
-      // If we have a final transcript, enhance it after a short delay
-      if (finalTranscript.trim() && autoEnhance) {
+      // Wait 5 seconds of silence before sending to AI
+      if (currentTranscript.trim() && autoEnhance) {
         timeoutRef.current = setTimeout(() => {
-          enhanceSpeech(finalTranscript.trim());
-        }, 1000);
+          enhanceSpeech(currentTranscript.trim());
+        }, 5000);
       }
     };
 
