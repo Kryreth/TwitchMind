@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Users, ExternalLink, Loader2, Rocket, Crown } from "lucide-react";
+import { Users, ExternalLink, Loader2, Rocket, Crown, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { UserProfile } from "@shared/schema";
 
@@ -126,9 +126,16 @@ export default function RaidManagement() {
         <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">
           Raid Management
         </h1>
-        <p className="text-muted-foreground" data-testid="text-page-description">
+        <p className="text-muted-foreground mb-3" data-testid="text-page-description">
           View incoming raids and send your viewers to raid other channels
         </p>
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+          <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-foreground">Note:</strong> To send raids, you must be authenticated with Twitch. 
+            If raid commands fail, try disconnecting and reconnecting your Twitch account in Settings to grant raid permissions.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

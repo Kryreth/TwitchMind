@@ -464,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get authenticated user
       const user = await storage.getAuthenticatedUser();
       if (!user) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return res.status(401).json({ error: "Not authenticated. Please connect with Twitch in Settings." });
       }
 
       // Get target user info
@@ -483,11 +483,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (success) {
         res.json({ success: true, message: `Raid started to ${toUsername}` });
       } else {
-        res.status(500).json({ error: "Failed to start raid" });
+        res.status(500).json({ error: "Failed to start raid. Please try reconnecting your Twitch account in Settings to grant raid permissions." });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting raid:", error);
-      res.status(500).json({ error: "Failed to start raid" });
+      
+      // Check if it's a scope error
+      if (error.status === 401 || (error.message && error.message.includes('scope'))) {
+        return res.status(403).json({ 
+          error: "Missing permissions. Please reconnect your Twitch account in Settings to grant raid permissions.",
+          needsReauth: true
+        });
+      }
+      
+      res.status(500).json({ error: "Failed to start raid. Please try again." });
     }
   });
 
