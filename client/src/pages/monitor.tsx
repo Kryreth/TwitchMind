@@ -410,11 +410,57 @@ export default function Monitor() {
               <div className="p-4 border rounded-lg bg-primary/5 space-y-3">
                 <h4 className="text-sm font-semibold flex items-center gap-2 text-primary">
                   <Zap className="h-4 w-4" />
-                  AI Voice Quality (Puter.js)
+                  AI Voice Settings (Puter.js - Free Unlimited)
                 </h4>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Voice Engine</Label>
+                  <Label className="text-xs text-muted-foreground">Voice</Label>
+                  <select
+                    className="w-full p-2 rounded-md border bg-background text-sm"
+                    value={puterTTS.settings.voice}
+                    onChange={(e) => puterTTS.updateSettings({ voice: e.target.value })}
+                    data-testid="select-puter-voice"
+                  >
+                    <optgroup label="🇺🇸 US English - Male">
+                      {puterTTS.voices.filter(v => v.region === "US" && v.gender === "Male").map(voice => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🇺🇸 US English - Female">
+                      {puterTTS.voices.filter(v => v.region === "US" && v.gender === "Female").map(voice => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🇬🇧 British English">
+                      {puterTTS.voices.filter(v => v.region === "UK").map(voice => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name} ({voice.gender})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🇦🇺 Australian English">
+                      {puterTTS.voices.filter(v => v.region === "Australia").map(voice => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name} ({voice.gender})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🇮🇳 Indian English">
+                      {puterTTS.voices.filter(v => v.region === "India").map(voice => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name} ({voice.gender})
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Voice Quality</Label>
                   <select
                     className="w-full p-2 rounded-md border bg-background text-sm"
                     value={puterTTS.settings.engine}
@@ -450,7 +496,8 @@ export default function Monitor() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    puterTTS.speak("Welcome to StreamDachi! This is a test of the Puter text-to-speech system with " + puterTTS.settings.engine + " quality.");
+                    const voice = puterTTS.voices.find(v => v.id === puterTTS.settings.voice);
+                    puterTTS.speak(`Hello! I'm ${voice?.name}, speaking with ${puterTTS.settings.engine} quality. Welcome to StreamDachi!`);
                   }}
                   disabled={puterTTS.isSpeaking}
                   className="w-full"
@@ -464,7 +511,7 @@ export default function Monitor() {
                   ) : (
                     <>
                       <Volume2 className="h-4 w-4 mr-2" />
-                      Test Puter TTS
+                      Test Voice
                     </>
                   )}
                 </Button>
