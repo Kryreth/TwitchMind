@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 **Framework**: React with TypeScript, using Vite as the build tool.
 **UI Component System**: Shadcn UI (New York variant) built on Radix UI primitives, featuring a dark-first design with Twitch-inspired purple accent colors (HSL 265 100% 70%).
 **State Management**: TanStack Query (React Query) for server state and data fetching, integrated with WebSockets for real-time chat updates.
-**Routing**: Wouter for lightweight client-side routing across eight main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, Raid Management, Monitor, and Settings.
+**Routing**: Wouter for lightweight client-side routing across nine main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, Raid Management, Monitor, Audio Settings, and Settings.
 **Styling**: Tailwind CSS with custom design tokens for theming and a custom color palette matching the Twitch aesthetic.
 **Data Visualization**: Recharts library for analytics charts, including bar charts for user activity, pie charts for sentiment distribution, and line charts for sentiment trends.
 
@@ -49,7 +49,13 @@ Preferred communication style: Simple, everyday language.
 *   **Token Refresh System**: Automatic Twitch OAuth token renewal.
 *   **DachiStream Page Consolidation**: Dedicated `/dachistream` page for all stream interaction and AI behavior settings, including message selection, response modes, topic filters, general configuration, shoutouts, and TTS.
 *   **AI Personality System**: Introduces six personality options (Casual, Comedy, Quirky, Serious, Gaming, Professional) to customize AI response tone.
-*   **VIP Management System**: Dedicated `/vip-management` page for adding/removing VIPs, viewing shoutout cooldowns, and role tracking. Includes Test Shoutout feature to preview VIP's latest Twitch clip.
+*   **VIP Management System**: Dedicated `/vip-management` page for adding/removing VIPs with enhanced UI. Features include:
+    *   Profile pictures fetched from Twitch API
+    *   Real-time follower count display
+    *   Live streaming status with viewer count and current game
+    *   Shoutout cooldown management with fixed options (1h, 2h, 4h, 12h, 24h, 48h, 72h, 1 week)
+    *   Test Shoutout feature that fetches and displays VIP's latest Twitch clip with proper embed formatting and autoplay
+    *   Role tracking (Moderator, Subscriber badges)
 *   **AI Learning Engine**: Periodic analysis (every 10 minutes) of user chat patterns to generate personality summaries for personalized AI responses.
 *   **Test Shoutout Feature**: Click any VIP's "Test" button to fetch and preview their latest Twitch clip in a modal, allowing streamers to test the shoutout system before going live.
 *   **Raid Management System**: Dedicated `/raid-management` page with two-way raid functionality. View incoming raids with clickable Twitch profile links. Send outgoing raids with VIPs shown first, supports any Twitch channel via search, and executes raid commands through Twitch Helix API.
@@ -59,12 +65,24 @@ Preferred communication style: Simple, everyday language.
     *   **AI Voice TTS (Puter.js - Free Unlimited)**: Automatically speaks the AI-rephrased text aloud when enabled using Puter.js Neural or Generative engines (AWS Polly backend). Provides high-quality, human-like voices with three quality levels: Standard, Neural, and Generative. Activates after 5 seconds of silence to provide instant audio feedback of the rephrased message. Volume adjustable 0%-100%.
     *   **VIP Shoutout Audio (Web Speech API)**: Speaks VIP greeting messages when VIPs join chat using browser-native TTS (separate from AI voice system). Shares voice selection, pitch (0.5x-2.0x), speed (0.5x-2.0x), and volume (0%-100%) settings with AI voice system.
     *   Both systems are completely independent with separate enable/disable toggles.
+*   **Clean Live Chat Experience**: Live Chat page displays authentic Twitch messages without AI analysis clutter. Sentiment badges and colored borders removed from chat view for cleaner, more familiar Twitch-like experience.
+*   **Analytics-Focused Sentiment Display**: All sentiment analysis (badges, scores, charts) moved exclusively to Analytics tab, keeping data insights separate from live chat monitoring.
+*   **Audio Settings Page**: Dedicated `/audio-settings` page consolidating all voice and audio configuration:
+    *   Voice & TTS settings (Puter.js voice selection, AI voice toggle, max voice length)
+    *   Microphone settings (mic mode, speech cleanup, fallback options, cooldown between replies)
+    *   Separate from general settings for better organization
 
 ## External Dependencies
 
 **Twitch Integration**:
 *   `tmi.js`: For connecting to Twitch IRC and listening to chat messages, including incoming raid detection.
-*   Twitch Helix API: For global user search, OAuth authentication, and outgoing raid commands via POST /helix/raids endpoint.
+*   Twitch Helix API: Comprehensive integration including:
+    *   Global user search with profile pictures
+    *   OAuth authentication with automatic token refresh
+    *   Outgoing raid commands via POST /helix/raids endpoint
+    *   Follower count fetching via /helix/channels/followers endpoint
+    *   Live stream status checking via /helix/streams endpoint
+    *   Clip fetching for Test Shoutout feature via /helix/clips endpoint
 
 **GroqCloud AI Integration**:
 *   `groq-sdk`: Official SDK for all AI functionalities.
