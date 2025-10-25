@@ -5,9 +5,10 @@ import type { ChatMessageWithAnalysis } from "@shared/schema";
 
 interface ChatMessageProps {
   message: ChatMessageWithAnalysis;
+  showSentiment?: boolean; // Show sentiment badge (for Analytics only)
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, showSentiment = false }: ChatMessageProps) {
   const getSentimentColor = (sentiment?: string) => {
     if (!sentiment) return "";
     switch (sentiment) {
@@ -27,7 +28,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div
       className={`flex items-start gap-3 px-4 py-2 hover-elevate ${
-        message.analysis ? `border-l-2 ${getSentimentColor(message.analysis.sentiment)}` : ""
+        showSentiment && message.analysis ? `border-l-2 ${getSentimentColor(message.analysis.sentiment)}` : ""
       }`}
       data-testid={`chat-message-${message.id}`}
     >
@@ -48,7 +49,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <span className="text-xs font-mono text-muted-foreground" data-testid={`message-timestamp-${message.id}`}>
             {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
           </span>
-          {message.analysis && (
+          {showSentiment && message.analysis && (
             <Badge variant="secondary" className="text-xs" data-testid={`message-sentiment-${message.id}`}>
               {message.analysis.sentiment}
             </Badge>
