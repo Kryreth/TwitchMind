@@ -563,17 +563,23 @@ export default function VIPManagement() {
             <div className="space-y-4">
               <div className="aspect-video w-full">
                 <iframe
-                  src={`${testClip.url.replace('clip/', 'clip/')}?parent=${window.location.hostname}&autoplay=false`}
+                  src={`https://clips.twitch.tv/embed?clip=${testClip.url.split('/').pop()}&parent=${window.location.hostname}&autoplay=true`}
                   className="w-full h-full rounded-md"
                   allowFullScreen
                   title={testClip.title}
+                  data-testid="iframe-test-clip"
                 />
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-sm font-medium text-foreground mb-1">{testClip.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  This is a preview of what viewers might see during a shoutout
-                </p>
+                <a 
+                  href={testClip.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline"
+                >
+                  Open clip in new tab →
+                </a>
               </div>
             </div>
           ) : null}
