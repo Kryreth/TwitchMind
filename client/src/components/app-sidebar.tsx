@@ -1,4 +1,4 @@
-import { ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, CpuChipIcon, PresentationChartLineIcon, ShieldCheckIcon, BoltIcon, Square3Stack3DIcon, RocketLaunchIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, CpuChipIcon, PresentationChartLineIcon, ShieldCheckIcon, BoltIcon, Square3Stack3DIcon, RocketLaunchIcon, SpeakerWaveIcon } from "@heroicons/react/24/outline";
 import { SiTwitch } from "react-icons/si";
 import {
   Sidebar,
@@ -52,6 +52,11 @@ const menuItems = [
     title: "Raid Management",
     url: "/raid-management",
     icon: RocketLaunchIcon,
+  },
+  {
+    title: "Audio Settings",
+    url: "/audio-settings",
+    icon: SpeakerWaveIcon,
   },
   {
     title: "Settings",

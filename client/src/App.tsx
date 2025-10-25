@@ -15,6 +15,7 @@ import SettingsPage from "@/pages/settings";
 import VIPManagement from "@/pages/vip-management";
 import RaidManagement from "@/pages/raid-management";
 import Monitor from "@/pages/monitor";
+import AudioSettings from "@/pages/audio-settings";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/vip-management" component={VIPManagement} />
       <Route path="/raid-management" component={RaidManagement} />
       <Route path="/monitor" component={Monitor} />
+      <Route path="/audio-settings" component={AudioSettings} />
       <Route path="/settings" component={SettingsPage} />
     </Switch>
   );
