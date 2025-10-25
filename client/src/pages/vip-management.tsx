@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Shield, Trash2, Plus, Clock, Loader2, Eye, Copy, CheckCircle, Video } from "lucide-react";
@@ -280,6 +282,32 @@ export default function VIPManagement() {
     }
   };
 
+  const updateCooldownMutation = useMutation({
+    mutationFn: async (hours: number) => {
+      const settingId = settingsArray[0]?.id;
+      if (!settingId) {
+        throw new Error("Settings not found");
+      }
+      return await apiRequest("PATCH", `/api/settings/${settingId}`, {
+        dachipoolShoutoutCooldownHours: hours,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "Cooldown Updated",
+        description: "Shoutout cooldown has been changed successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update cooldown settings.",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (browserSourceToken) {
       const domain = window.location.host;
@@ -375,6 +403,46 @@ export default function VIPManagement() {
               <Plus className="h-4 w-4 mr-2" />
               Add VIP
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Shoutout Settings</CardTitle>
+          <CardDescription>
+            Configure the cooldown period between automatic shoutouts for the same VIP
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <Label htmlFor="cooldown-select">Cooldown Duration</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Minimum time between shoutouts for the same VIP
+                </p>
+              </div>
+              <Select
+                value={cooldownHours.toString()}
+                onValueChange={(value) => updateCooldownMutation.mutate(parseInt(value))}
+                disabled={updateCooldownMutation.isPending}
+              >
+                <SelectTrigger className="w-[180px]" id="cooldown-select" data-testid="select-cooldown">
+                  <SelectValue placeholder="Select cooldown" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 hour</SelectItem>
+                  <SelectItem value="2">2 hours</SelectItem>
+                  <SelectItem value="4">4 hours</SelectItem>
+                  <SelectItem value="12">12 hours</SelectItem>
+                  <SelectItem value="24">24 hours</SelectItem>
+                  <SelectItem value="48">48 hours (2 days)</SelectItem>
+                  <SelectItem value="72">72 hours (3 days)</SelectItem>
+                  <SelectItem value="168">1 week</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
