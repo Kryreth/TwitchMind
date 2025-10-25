@@ -30,8 +30,17 @@ export default function VIPManagement() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: vips = [], isLoading } = useQuery<UserProfile[]>({
-    queryKey: ["/api/users/vips"],
+  interface EnhancedVIP extends UserProfile {
+    profileImageUrl?: string | null;
+    followerCount?: number;
+    isLive?: boolean;
+    viewerCount?: number;
+    game?: string;
+  }
+
+  const { data: vips = [], isLoading } = useQuery<EnhancedVIP[]>({
+    queryKey: ["/api/users/vips/enhanced"],
+    refetchInterval: 60000, // Refresh every minute to update live status
   });
 
   const { data: settings } = useQuery({
@@ -399,13 +408,43 @@ export default function VIPManagement() {
                   className="flex items-center justify-between p-4 rounded-lg border bg-card hover-elevate"
                   data-testid={`card-vip-${vip.userId}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-medium" data-testid={`text-vip-username-${vip.userId}`}>
-                        {vip.username}
-                      </p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <Avatar className="h-12 w-12 border-2 border-primary">
+                      {vip.profileImageUrl ? (
+                        <AvatarImage src={vip.profileImageUrl} alt={vip.username} />
+                      ) : null}
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <Shield className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-base" data-testid={`text-vip-username-${vip.userId}`}>
+                          {vip.username}
+                        </p>
+                        {vip.isLive && (
+                          <Badge variant="destructive" className="gap-1 animate-pulse">
+                            <div className="h-2 w-2 rounded-full bg-white" />
+                            LIVE
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                        {vip.followerCount !== undefined && (
+                          <span className="flex items-center gap-1">
+                            <span className="font-medium">{vip.followerCount.toLocaleString()}</span> followers
+                          </span>
+                        )}
+                        {vip.isLive && vip.viewerCount !== undefined && (
+                          <span className="flex items-center gap-1">
+                            <span className="font-medium text-destructive">{vip.viewerCount.toLocaleString()}</span> watching
+                          </span>
+                        )}
+                        {vip.isLive && vip.game && (
+                          <span className="truncate">Playing {vip.game}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                         <Clock className="h-3 w-3" />
                         <span data-testid={`text-vip-last-shoutout-${vip.userId}`}>
                           Last shoutout: {getTimeSinceShoutout(vip.shoutoutLastGiven ? new Date(vip.shoutoutLastGiven).toISOString() : null)}
@@ -414,7 +453,7 @@ export default function VIPManagement() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge variant="outline" data-testid={`badge-vip-cooldown-${vip.userId}`}>
                       {getCooldownStatus(vip.shoutoutLastGiven ? new Date(vip.shoutoutLastGiven).toISOString() : null, cooldownHours)}
                     </Badge>

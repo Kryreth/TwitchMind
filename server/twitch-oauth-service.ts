@@ -398,6 +398,178 @@ export class TwitchOAuthService {
       return null;
     }
   }
+
+  /**
+   * Gets follower count for a Twitch user
+   */
+  async getFollowerCount(username: string): Promise<number> {
+    try {
+      const appToken = await this.getAppAccessToken();
+
+      // Get user ID from username
+      const userResponse = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+        headers: {
+          'Authorization': `Bearer ${appToken}`,
+          'Client-Id': TWITCH_CLIENT_ID,
+        },
+      });
+
+      if (!userResponse.ok) {
+        return 0;
+      }
+
+      const userData = await userResponse.json();
+      if (!userData.data || userData.data.length === 0) {
+        return 0;
+      }
+
+      const broadcasterId = userData.data[0].id;
+
+      // Get follower count
+      const followersResponse = await fetch(
+        `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=1`,
+        {
+          headers: {
+            'Authorization': `Bearer ${appToken}`,
+            'Client-Id': TWITCH_CLIENT_ID,
+          },
+        }
+      );
+
+      if (!followersResponse.ok) {
+        return 0;
+      }
+
+      const followersData = await followersResponse.json();
+      return followersData.total || 0;
+    } catch (error) {
+      console.error('Error fetching follower count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Checks if a user is currently live streaming
+   */
+  async getStreamStatus(username: string): Promise<{ isLive: boolean; viewerCount?: number; game?: string }> {
+    try {
+      const appToken = await this.getAppAccessToken();
+
+      // Get user ID from username
+      const userResponse = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+        headers: {
+          'Authorization': `Bearer ${appToken}`,
+          'Client-Id': TWITCH_CLIENT_ID,
+        },
+      });
+
+      if (!userResponse.ok) {
+        return { isLive: false };
+      }
+
+      const userData = await userResponse.json();
+      if (!userData.data || userData.data.length === 0) {
+        return { isLive: false };
+      }
+
+      const userId = userData.data[0].id;
+
+      // Check if user is live
+      const streamResponse = await fetch(
+        `https://api.twitch.tv/helix/streams?user_id=${userId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${appToken}`,
+            'Client-Id': TWITCH_CLIENT_ID,
+          },
+        }
+      );
+
+      if (!streamResponse.ok) {
+        return { isLive: false };
+      }
+
+      const streamData = await streamResponse.json();
+      
+      if (streamData.data && streamData.data.length > 0) {
+        const stream = streamData.data[0];
+        return {
+          isLive: true,
+          viewerCount: stream.viewer_count,
+          game: stream.game_name,
+        };
+      }
+
+      return { isLive: false };
+    } catch (error) {
+      console.error('Error checking stream status:', error);
+      return { isLive: false };
+    }
+  }
+
+  /**
+   * Gets enhanced VIP information including profile picture, follower count, and live status
+   */
+  async getEnhancedUserInfo(username: string): Promise<{
+    profileImageUrl: string | null;
+    followerCount: number;
+    isLive: boolean;
+    viewerCount?: number;
+    game?: string;
+  }> {
+    try {
+      const appToken = await this.getAppAccessToken();
+
+      // Get user info
+      const userResponse = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+        headers: {
+          'Authorization': `Bearer ${appToken}`,
+          'Client-Id': TWITCH_CLIENT_ID,
+        },
+      });
+
+      if (!userResponse.ok) {
+        return {
+          profileImageUrl: null,
+          followerCount: 0,
+          isLive: false,
+        };
+      }
+
+      const userData = await userResponse.json();
+      if (!userData.data || userData.data.length === 0) {
+        return {
+          profileImageUrl: null,
+          followerCount: 0,
+          isLive: false,
+        };
+      }
+
+      const user = userData.data[0];
+      const userId = user.id;
+
+      // Fetch follower count and stream status in parallel
+      const [followerCount, streamStatus] = await Promise.all([
+        this.getFollowerCount(username),
+        this.getStreamStatus(username),
+      ]);
+
+      return {
+        profileImageUrl: user.profile_image_url,
+        followerCount,
+        isLive: streamStatus.isLive,
+        viewerCount: streamStatus.viewerCount,
+        game: streamStatus.game,
+      };
+    } catch (error) {
+      console.error('Error fetching enhanced user info:', error);
+      return {
+        profileImageUrl: null,
+        followerCount: 0,
+        isLive: false,
+      };
+    }
+  }
 }
 
 export const twitchOAuthService = new TwitchOAuthService();

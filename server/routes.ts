@@ -142,6 +142,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/vips/enhanced", async (req, res) => {
+    try {
+      const vips = await storage.getVipUsers();
+      
+      if (vips.length === 0) {
+        return res.json([]);
+      }
+
+      // Fetch enhanced info for all VIPs in parallel
+      const enhancedVips = await Promise.all(
+        vips.map(async (vip) => {
+          const enhancedInfo = await twitchOAuthService.getEnhancedUserInfo(vip.username);
+          return {
+            ...vip,
+            profileImageUrl: enhancedInfo.profileImageUrl,
+            followerCount: enhancedInfo.followerCount,
+            isLive: enhancedInfo.isLive,
+            viewerCount: enhancedInfo.viewerCount,
+            game: enhancedInfo.game,
+          };
+        })
+      );
+
+      res.json(enhancedVips);
+    } catch (error) {
+      console.error("Error fetching enhanced VIP data:", error);
+      res.status(500).json({ error: "Failed to fetch enhanced VIP data" });
+    }
+  });
+
   app.get("/api/users/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
