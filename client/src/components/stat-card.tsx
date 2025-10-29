@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon } from "@heroicons/react/24/outline";
 
 interface StatCardProps {
@@ -10,14 +11,30 @@ interface StatCardProps {
   };
   icon?: React.ComponentType<{ className?: string }>;
   loading?: boolean;
+  showToggle?: boolean;
+  isVisible?: boolean;
+  onToggleVisibility?: (visible: boolean) => void;
 }
 
-export function StatCard({ title, value, trend, icon: Icon, loading }: StatCardProps) {
+export function StatCard({ title, value, trend, icon: Icon, loading, showToggle, isVisible, onToggleVisibility }: StatCardProps) {
+  if (showToggle && !isVisible) {
+    return null;
+  }
+
   return (
     <Card data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+          {showToggle && (
+            <Switch
+              checked={isVisible}
+              onCheckedChange={onToggleVisibility}
+              data-testid={`switch-${title.toLowerCase().replace(/\s+/g, '-')}`}
+            />
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (

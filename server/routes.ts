@@ -323,6 +323,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Moderation Actions
+  app.get("/api/moderation-actions", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const actions = await storage.getModerationActions(limit);
+      res.json(actions);
+    } catch (error) {
+      console.error("Error fetching moderation actions:", error);
+      res.status(500).json({ error: "Failed to fetch moderation actions" });
+    }
+  });
+
   // Twitch OAuth Routes
   app.get("/api/auth/twitch", (req, res) => {
     try {

@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { ChatMessage, AiAnalysis } from "@shared/schema";
+import type { ChatMessage, AiAnalysis, Settings, ModerationAction } from "@shared/schema";
 import { 
   ChatBubbleLeftRightIcon, 
   CpuChipIcon, 
@@ -32,6 +34,7 @@ interface AuthenticatedUser {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("today");
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery<ChatMessage[]>({
     queryKey: ["/api/messages"],
@@ -41,9 +44,19 @@ export default function Dashboard() {
     queryKey: ["/api/analyses"],
   });
 
+  const { data: moderationActions = [], isLoading: moderationActionsLoading } = useQuery<ModerationAction[]>({
+    queryKey: ["/api/moderation-actions"],
+  });
+
+  const { data: settingsList = [] } = useQuery<Settings[]>({
+    queryKey: ["/api/settings"],
+  });
+
+  const settings = settingsList[0];
+
   const { data: twitchStatus } = useQuery<TwitchStatus>({
     queryKey: ["/api/twitch/status"],
-    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchInterval: 3000,
   });
 
   const { data: authenticatedUser } = useQuery<AuthenticatedUser>({
@@ -57,7 +70,7 @@ export default function Dashboard() {
     quotaRemaining: number;
   }>({
     queryKey: ["/api/elevenlabs/usage"],
-    refetchInterval: 60000, // Refresh every 60 seconds
+    refetchInterval: 60000,
   });
 
   const connectMutation = useMutation({
@@ -95,21 +108,92 @@ export default function Dashboard() {
     },
   });
 
-  const totalMessages = messages.length;
-  const aiAnalyzed = analyses.length;
-  const positiveMessages = analyses.filter((a) => a.sentiment === "positive").length;
-  const negativeMessages = analyses.filter((a) => a.sentiment === "negative").length;
-  const toxicMessages = analyses.filter((a) => a.toxicity).length;
+  const startStreamSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!settings?.id) {
+        throw new Error("Settings not loaded");
+      }
+      return await apiRequest(`/api/settings/${settings.id}`, "PATCH", {
+        streamSessionStarted: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Stream session started!",
+        description: "New stream session timestamp has been set",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to start session",
+        description: error.message || "Failed to update stream session",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const uniqueUsers = new Set(messages.map((m) => m.username)).size;
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (updates: Partial<Settings>) => {
+      if (!settings?.id) {
+        throw new Error("Settings not loaded");
+      }
+      return await apiRequest(`/api/settings/${settings.id}`, "PATCH", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    },
+  });
+
+  const handleToggleVisibility = (field: keyof Settings, value: boolean) => {
+    updateSettingsMutation.mutate({ [field]: value });
+  };
+
+  const streamSessionStarted = settings?.streamSessionStarted ? new Date(settings.streamSessionStarted) : null;
+
+  const todayMessages = streamSessionStarted 
+    ? messages.filter((m) => new Date(m.timestamp) >= streamSessionStarted)
+    : messages;
+
+  const missedMessages = streamSessionStarted 
+    ? messages.filter((m) => new Date(m.timestamp) < streamSessionStarted)
+    : [];
+
+  const todayAnalyses = streamSessionStarted
+    ? analyses.filter((a) => new Date(a.timestamp) >= streamSessionStarted)
+    : analyses;
+
+  const missedAnalyses = streamSessionStarted
+    ? analyses.filter((a) => new Date(a.timestamp) < streamSessionStarted)
+    : [];
+
+  const todayModerationActions = streamSessionStarted
+    ? moderationActions.filter((a) => new Date(a.timestamp) >= streamSessionStarted)
+    : moderationActions;
+
+  const missedModerationActions = streamSessionStarted
+    ? moderationActions.filter((a) => new Date(a.timestamp) < streamSessionStarted)
+    : [];
+
+  const currentMessages = activeTab === "today" ? todayMessages : missedMessages;
+  const currentAnalyses = activeTab === "today" ? todayAnalyses : missedAnalyses;
+  const currentModerationActions = activeTab === "today" ? todayModerationActions : missedModerationActions;
+
+  const totalMessages = currentMessages.length;
+  const aiAnalyzed = currentAnalyses.length;
+  const uniqueUsers = new Set(currentMessages.map((m) => m.username)).size;
+  const moderationActionsCount = currentModerationActions.length;
+
+  const positiveMessages = currentAnalyses.filter((a) => a.sentiment === "positive").length;
+  const negativeMessages = currentAnalyses.filter((a) => a.sentiment === "negative").length;
 
   const sentimentData = [
     { name: "Positive", value: positiveMessages, color: "hsl(var(--chart-2))" },
-    { name: "Neutral", value: analyses.length - positiveMessages - negativeMessages, color: "hsl(var(--chart-3))" },
+    { name: "Neutral", value: currentAnalyses.length - positiveMessages - negativeMessages, color: "hsl(var(--chart-3))" },
     { name: "Negative", value: negativeMessages, color: "hsl(var(--destructive))" },
   ];
 
-  const hourlyData = messages.reduce((acc, msg) => {
+  const hourlyData = currentMessages.reduce((acc, msg) => {
     const hour = new Date(msg.timestamp).getHours();
     const existing = acc.find((d) => d.hour === hour);
     if (existing) {
@@ -134,37 +218,265 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Messages"
-          value={totalMessages}
-          icon={ChatBubbleLeftRightIcon}
-          loading={messagesLoading}
-        />
-        <StatCard
-          title="AI Analyzed"
-          value={aiAnalyzed}
-          icon={CpuChipIcon}
-          loading={analysesLoading}
-        />
-        <StatCard
-          title="Active Users"
-          value={uniqueUsers}
-          icon={UsersIcon}
-          loading={messagesLoading}
-        />
-        <StatCard
-          title="Moderation Actions"
-          value={toxicMessages}
-          icon={ShieldCheckIcon}
-          loading={analysesLoading}
-        />
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-dashboard">
+        <TabsList data-testid="tabs-list-dashboard">
+          <TabsTrigger value="today" data-testid="tab-today">
+            Today
+          </TabsTrigger>
+          <TabsTrigger value="missed" data-testid="tab-missed">
+            What You Missed
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="today" data-testid="tab-content-today" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Messages"
+              value={totalMessages}
+              icon={ChatBubbleLeftRightIcon}
+              loading={messagesLoading}
+              showToggle
+              isVisible={settings?.dashboardShowTotalMessages ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowTotalMessages", value)}
+            />
+            <StatCard
+              title="AI Analyzed"
+              value={aiAnalyzed}
+              icon={CpuChipIcon}
+              loading={analysesLoading}
+              showToggle
+              isVisible={settings?.dashboardShowAiAnalyzed ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowAiAnalyzed", value)}
+            />
+            <StatCard
+              title="Active Users"
+              value={uniqueUsers}
+              icon={UsersIcon}
+              loading={messagesLoading}
+              showToggle
+              isVisible={settings?.dashboardShowActiveUsers ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowActiveUsers", value)}
+            />
+            <StatCard
+              title="Moderation Actions"
+              value={moderationActionsCount}
+              icon={ShieldCheckIcon}
+              loading={moderationActionsLoading}
+              showToggle
+              isVisible={settings?.dashboardShowModActions ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowModActions", value)}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card data-testid="card-sentiment-distribution">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Sentiment Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentAnalyses.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No analysis data yet</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={sentimentData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {sentimentData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <div className="mt-4 flex justify-center gap-4">
+                  {sentimentData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-muted-foreground">{item.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-hourly-activity">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Hourly Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {hourlyData.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No message data yet</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={hourlyData}>
+                      <XAxis
+                        dataKey="hour"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "6px",
+                        }}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="missed" data-testid="tab-content-missed" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Messages"
+              value={totalMessages}
+              icon={ChatBubbleLeftRightIcon}
+              loading={messagesLoading}
+              showToggle
+              isVisible={settings?.dashboardShowTotalMessages ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowTotalMessages", value)}
+            />
+            <StatCard
+              title="AI Analyzed"
+              value={aiAnalyzed}
+              icon={CpuChipIcon}
+              loading={analysesLoading}
+              showToggle
+              isVisible={settings?.dashboardShowAiAnalyzed ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowAiAnalyzed", value)}
+            />
+            <StatCard
+              title="Active Users"
+              value={uniqueUsers}
+              icon={UsersIcon}
+              loading={messagesLoading}
+              showToggle
+              isVisible={settings?.dashboardShowActiveUsers ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowActiveUsers", value)}
+            />
+            <StatCard
+              title="Moderation Actions"
+              value={moderationActionsCount}
+              icon={ShieldCheckIcon}
+              loading={moderationActionsLoading}
+              showToggle
+              isVisible={settings?.dashboardShowModActions ?? true}
+              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowModActions", value)}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card data-testid="card-sentiment-distribution">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Sentiment Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentAnalyses.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No analysis data yet</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={sentimentData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {sentimentData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <div className="mt-4 flex justify-center gap-4">
+                  {sentimentData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-muted-foreground">{item.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-hourly-activity">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Hourly Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {hourlyData.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No message data yet</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={hourlyData}>
+                      <XAxis
+                        dataKey="hour"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "6px",
+                        }}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {authenticatedUser && (
         <Card data-testid="card-twitch-connection">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <CardTitle className="text-lg font-semibold">Twitch Connection</CardTitle>
               {twitchStatus?.connected ? (
                 <Badge variant="secondary" className="gap-2" data-testid="badge-connected">
@@ -180,7 +492,7 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Channel: {authenticatedUser.twitchDisplayName}</p>
                 {twitchStatus?.connected ? (
@@ -192,16 +504,31 @@ export default function Dashboard() {
                     Click connect to start monitoring your chat
                   </p>
                 )}
+                {streamSessionStarted && (
+                  <p className="text-xs text-muted-foreground">
+                    Session started: {streamSessionStarted.toLocaleString()}
+                  </p>
+                )}
               </div>
-              {!twitchStatus?.connected && (
-                <Button 
-                  onClick={() => connectMutation.mutate()}
-                  disabled={connectMutation.isPending}
-                  data-testid="button-connect-chat"
+              <div className="flex gap-2">
+                {!twitchStatus?.connected && (
+                  <Button 
+                    onClick={() => connectMutation.mutate()}
+                    disabled={connectMutation.isPending}
+                    data-testid="button-connect-chat"
+                  >
+                    {connectMutation.isPending ? "Connecting..." : "Connect to Chat"}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => startStreamSessionMutation.mutate()}
+                  disabled={startStreamSessionMutation.isPending || !settings}
+                  data-testid="button-start-stream-session"
                 >
-                  {connectMutation.isPending ? "Connecting..." : "Connect to Chat"}
+                  {startStreamSessionMutation.isPending ? "Starting..." : "Start New Stream Session"}
                 </Button>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -244,87 +571,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card data-testid="card-sentiment-distribution">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Sentiment Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {analyses.length === 0 ? (
-              <div className="flex h-[200px] items-center justify-center">
-                <p className="text-sm text-muted-foreground">No analysis data yet</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={sentimentData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {sentimentData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-            <div className="mt-4 flex justify-center gap-4">
-              {sentimentData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs text-muted-foreground">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="card-hourly-activity">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Hourly Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {hourlyData.length === 0 ? (
-              <div className="flex h-[200px] items-center justify-center">
-                <p className="text-sm text-muted-foreground">No message data yet</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={hourlyData}>
-                  <XAxis
-                    dataKey="hour"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "6px",
-                    }}
-                  />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
