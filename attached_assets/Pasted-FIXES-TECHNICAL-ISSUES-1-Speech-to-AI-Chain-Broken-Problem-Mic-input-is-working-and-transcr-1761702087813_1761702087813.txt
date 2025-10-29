@@ -1,0 +1,171 @@
+FIXES & TECHNICAL ISSUES
+1. Speech-to-AI Chain Broken
+
+Problem: Mic input is working, and transcription is captured, but the system fails to pass that transcribed text to the AI (e.g. Grok or any replacement for OpenAI).
+
+Expected Fix:
+
+Ensure transcribed text is sent to the AI endpoint correctly.
+
+AI should generate a response and return it to the TTS module.
+
+Audio should then be routed back into headset and optionally out to Stream output or Discord.
+
+Add error logging if AI fails to respond or text isn’t passed.
+
+2. Test Button Not Fetching Clips
+
+Problem: The test/play button beside each VIP in VIP management doesn’t play their latest Twitch clip.
+
+Expected Fix:
+
+When pressed, use Twitch Helix API (/clips) to fetch latest public clip for the username.
+
+Clip should auto-play in the UI preview window.
+
+Handle edge cases (e.g. no public clips or error 403/401).
+
+💬 CHAT & UI EXPERIENCE
+3. Switch to Real Twitch Chat Experience
+
+Problem: Live chat window is AI-focused with summaries or “positivity feeds,” not functional for streamers/mods.
+
+Expected Behavior:
+
+Show real Twitch chat feed.
+
+Enable redemptions, timeouts, mod actions, emotes, channel point responses.
+
+Optional: toggle between "Raw Chat" and "AI Chat Summary" views.
+
+4. Move Sentiment Labels to Analytics
+
+Current Behavior: AI tags every user message as neutral/positive/negative or bot in the live chat window.
+
+New Behavior:
+
+Remove tags from the chat.
+
+In the Analytics tab, add a “Sentiment” column per user.
+
+Example:
+
+User	Last Message	AI Summary	Sentiment
+CatKing42	“I love this game!”	Fan	Positive
+⭐ VIP MANAGEMENT IMPROVEMENTS
+5. Move Cooldown into VIP Management
+
+Current Behavior: Cooldown for TTS shoutouts is buried in global settings.
+
+New Behavior:
+
+Add cooldown setting per VIP inside their VIP card.
+
+Streamer can control it without leaving the VIP section.
+
+6. Use Fixed Cooldown Options
+
+Current Behavior: Cooldown is a freeform timer or slider, imprecise.
+
+New Behavior:
+
+Replace with dropdown or radio buttons:
+
+1h, 2h, 4h, 12h, 24h, 48h, 72h, 1 week
+
+Prevents streamer errors from inputting weird values like 99999s.
+
+7. Show VIP Details Inline
+
+Requested Additions:
+
+Left of name: Display Twitch profile image (API: GET /users).
+
+Right of name:
+
+Follower count
+
+Last live timestamp (API: GET /streams)
+
+LIVE indicator (glow or badge if currently live)
+
+“On path to affiliate” badge if follower count < 50
+
+Viewer count (if currently live)
+
+8. Enhanced Shoutout Command
+
+New Features on Shoutout Trigger:
+
+Run /shoutout command to Twitch via chat.
+
+Autoplay latest clip (if exists).
+
+Show the last game streamed (use GET /channels endpoint).
+
+🔊 AUDIO SYSTEM IMPROVEMENTS
+9. Dedicated Audio Settings Tab
+
+Problem: Audio controls buried in unrelated panels.
+
+New Panel:
+
+New left sidebar item: “Audio Settings”
+
+Contains all input/output/TTS/routing settings in one place.
+
+10. Select Input/Output Devices
+
+Expected Options:
+
+Input: Microphones (e.g. XLR, USB, Voicemod, etc.)
+
+Output: Speakers, headphones, virtual cables
+
+Dropdowns populated from navigator.mediaDevices.enumerateDevices()
+
+11. Audio Routing / Duplication
+
+Goal: Hear StreamDachi audio AND route it to:
+
+VTube Studio (e.g. via VB-Cable)
+
+Discord (via default mic)
+
+Solution:
+
+Offer toggle: “Duplicate TTS output to selected input (virtual mic)”
+
+Add dropdown for routing destination.
+
+🖥️ DASHBOARD TOGGLES & CONTROLS
+12. Control Panel Additions
+
+Requested Controls (placed as a panel or top bar icons):
+
+Mic Mute Toggle: Live mic mute/unmute for speech → AI
+
+Master AI Kill Switch: Turns off all AI, keeps Twitch+VIPs running
+
+AI Voice Toggle: Mute/unmute StreamDachi's voice output
+
+StreamDachi Loop Toggle: Temporarily disable just the DachiPool/InteractionCycle without disabling rest of app
+
+Volume Knob: Master output volume slider or knob directly on dashboard
+
+📊 ANALYTICS & USER DATABASE
+13. User Database Viewer
+
+Requested View:
+
+Table/grid of all known users
+
+Columns: Username, Role (VIP/Mod/Sub), Last Message, Sentiment, #Interactions, Last Seen, TTS Usage
+
+Search + filter features
+
+Optional Add-ons:
+
+Export as CSV/JSON
+
+Click user to view full profile (chat history, event triggers, TTS responses)
