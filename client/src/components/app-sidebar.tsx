@@ -1,4 +1,4 @@
-import { ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, CpuChipIcon, PresentationChartLineIcon, ShieldCheckIcon, BoltIcon, Square3Stack3DIcon, RocketLaunchIcon, SpeakerWaveIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, CpuChipIcon, PresentationChartLineIcon, ShieldCheckIcon, BoltIcon, Square3Stack3DIcon, RocketLaunchIcon, SpeakerWaveIcon, CircleStackIcon } from "@heroicons/react/24/outline";
 import { SiTwitch } from "react-icons/si";
 import {
   Sidebar,
@@ -57,6 +57,11 @@ const menuItems = [
     title: "Audio Settings",
     url: "/audio-settings",
     icon: SpeakerWaveIcon,
+  },
+  {
+    title: "Database",
+    url: "/database",
+    icon: CircleStackIcon,
   },
   {
     title: "Settings",

@@ -9,6 +9,7 @@ import {
   authenticatedUsers,
   raids,
   voiceAiResponses,
+  moderationActions,
   type ChatMessage,
   type InsertChatMessage,
   type AiAnalysis,
@@ -29,6 +30,8 @@ import {
   type InsertRaid,
   type VoiceAiResponse,
   type InsertVoiceAiResponse,
+  type ModerationAction,
+  type InsertModerationAction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -91,6 +94,11 @@ export interface IStorage {
   // Voice AI Responses
   createVoiceAiResponse(response: InsertVoiceAiResponse): Promise<VoiceAiResponse>;
   getVoiceAiResponses(limit?: number): Promise<VoiceAiResponse[]>;
+  
+  // Moderation Actions
+  createModerationAction(action: InsertModerationAction): Promise<ModerationAction>;
+  getModerationActions(limit?: number): Promise<ModerationAction[]>;
+  getModerationActionsSince(timestamp: Date): Promise<ModerationAction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -466,6 +474,31 @@ export class DatabaseStorage implements IStorage {
       .from(voiceAiResponses)
       .orderBy(desc(voiceAiResponses.timestamp))
       .limit(limit);
+  }
+
+  // Moderation Actions
+  async createModerationAction(action: InsertModerationAction): Promise<ModerationAction> {
+    const [created] = await db
+      .insert(moderationActions)
+      .values(action)
+      .returning();
+    return created;
+  }
+
+  async getModerationActions(limit: number = 50): Promise<ModerationAction[]> {
+    return await db
+      .select()
+      .from(moderationActions)
+      .orderBy(desc(moderationActions.timestamp))
+      .limit(limit);
+  }
+
+  async getModerationActionsSince(timestamp: Date): Promise<ModerationAction[]> {
+    return await db
+      .select()
+      .from(moderationActions)
+      .where(sql`${moderationActions.timestamp} > ${timestamp}`)
+      .orderBy(desc(moderationActions.timestamp));
   }
 }
 

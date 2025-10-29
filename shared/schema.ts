@@ -100,6 +100,20 @@ export const raids = pgTable("raids", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 
+// Moderation Actions Table - Track Twitch mod events
+export const moderationActions = pgTable("moderation_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionType: text("action_type").notNull(), // timeout, ban, delete, clear
+  targetUserId: text("target_user_id"), // User being moderated
+  targetUsername: text("target_username").notNull(), // Username of moderated user
+  moderatorId: text("moderator_id"), // Moderator's user ID
+  moderatorUsername: text("moderator_username"), // Moderator's username
+  duration: integer("duration"), // Timeout duration in seconds (null for ban/delete)
+  reason: text("reason"), // Reason for action
+  messageDeleted: text("message_deleted"), // Message text if deleted
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
 // Settings Table - Enhanced with DachiPool configuration
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -151,6 +165,13 @@ export const settings = pgTable("settings", {
   dachiastreamPaused: boolean("dachiastream_paused").notNull().default(false),
   dachiastreamAutoSendToChat: boolean("dachiastream_auto_send_to_chat").notNull().default(false),
   dachiastreamCycleInterval: integer("dachiastream_cycle_interval").notNull().default(15), // seconds between cycles (5-60)
+  
+  // Dashboard Settings
+  streamSessionStarted: timestamp("stream_session_started"), // Track when current stream started
+  dashboardShowTotalMessages: boolean("dashboard_show_total_messages").notNull().default(true),
+  dashboardShowAiAnalyzed: boolean("dashboard_show_ai_analyzed").notNull().default(true),
+  dashboardShowActiveUsers: boolean("dashboard_show_active_users").notNull().default(true),
+  dashboardShowModActions: boolean("dashboard_show_mod_actions").notNull().default(true),
   
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -218,6 +239,11 @@ export const insertRaidSchema = createInsertSchema(raids).omit({
   timestamp: true,
 });
 
+export const insertModerationActionSchema = createInsertSchema(moderationActions).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Types
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
@@ -245,6 +271,9 @@ export type InsertAuthenticatedUser = z.infer<typeof insertAuthenticatedUserSche
 
 export type Raid = typeof raids.$inferSelect;
 export type InsertRaid = z.infer<typeof insertRaidSchema>;
+
+export type ModerationAction = typeof moderationActions.$inferSelect;
+export type InsertModerationAction = z.infer<typeof insertModerationActionSchema>;
 
 // Extended types for frontend
 export type ChatMessageWithAnalysis = ChatMessage & {
