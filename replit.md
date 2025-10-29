@@ -2,7 +2,9 @@
 
 ## Overview
 
-StreamDachi is a comprehensive Twitch integration application designed to enhance live streams with AI-powered voice features. It offers real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, moderators, subscribers), an automated shoutout system for VIPs with a 24-hour cooldown, and full per-stream chat logging. A key feature is its AI user learning engine, which provides personalized responses and configurable StreamDachi settings. The platform includes a hands-free voice AI system with continuous listening, automatic AI rephrasing using Groq, and unlimited free high-quality TTS using Puter.js (Neural/Generative engines). The VIP Management page includes a Test Shoutout feature that allows streamers to preview a VIP's latest Twitch clip before going live. The platform boasts a dark-themed dashboard with a distinctive Twitch aesthetic, utilizing purple accents.
+StreamDachi is a comprehensive Twitch integration application designed to enhance live streams with AI-powered voice features. It offers real-time chat monitoring, AI-driven chat analysis, user profile tracking (VIPs, moderators, subscribers), an automated shoutout system for VIPs with a 24-hour cooldown, and full per-stream chat logging. A key feature is its AI user learning engine, which provides personalized responses and configurable StreamDachi settings. The platform includes a hands-free voice AI system with continuous listening, automatic AI rephrasing using Groq, and unlimited free high-quality TTS using Puter.js (Neural/Generative engines). The VIP Management page includes a Test Shoutout feature that allows streamers to preview a VIP's latest Twitch clip before going live. 
+
+The dashboard features a "Today" vs "What You Missed" tab system for tracking daily vs offline activity, with toggleable stat cards (Total Messages, AI Analyzed, Active Users, Moderation Actions) and stream session management. A dedicated Database Viewer provides comprehensive internal data management with searchable user tables, chat messages, AI analysis, and CSV export capabilities. The platform boasts a dark-themed dashboard with a distinctive Twitch aesthetic, utilizing purple accents.
 
 ## User Preferences
 
@@ -15,14 +17,14 @@ Preferred communication style: Simple, everyday language.
 **Framework**: React with TypeScript, using Vite as the build tool.
 **UI Component System**: Shadcn UI (New York variant) built on Radix UI primitives, featuring a dark-first design with Twitch-inspired purple accent colors (HSL 265 100% 70%).
 **State Management**: TanStack Query (React Query) for server state and data fetching, integrated with WebSockets for real-time chat updates.
-**Routing**: Wouter for lightweight client-side routing across nine main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, Raid Management, Monitor, Audio Settings, and Settings.
+**Routing**: Wouter for lightweight client-side routing across ten main pages: Dashboard, Live Chat, Analytics, AI Controls, DachiStream, VIP Management, Raid Management, Monitor, Audio Settings, Database, and Settings.
 **Styling**: Tailwind CSS with custom design tokens for theming and a custom color palette matching the Twitch aesthetic.
 **Data Visualization**: Recharts library for analytics charts, including bar charts for user activity, pie charts for sentiment distribution, and line charts for sentiment trends.
 
 ### Backend Architecture
 
 **Server Framework**: Express.js with TypeScript, providing RESTful API endpoints and a WebSocket server for real-time communication.
-**Database Layer**: Drizzle ORM with Neon PostgreSQL serverless driver, utilizing a schema-first approach for type safety. Key tables include `user_profiles`, `user_insights`, `chat_messages`, `ai_analysis`, `ai_commands`, `raids`, `voice_ai_responses`, and `settings`. Chat messages are enhanced with `userId`, `streamId`, and `eventType` for detailed logging. Settings table includes browser source tokens for OBS integration. Voice AI responses table logs all original and rephrased text with timestamps and speech status.
+**Database Layer**: Drizzle ORM with Neon PostgreSQL serverless driver, utilizing a schema-first approach for type safety. Key tables include `user_profiles`, `user_insights`, `chat_messages`, `ai_analysis`, `ai_commands`, `raids`, `voice_ai_responses`, `moderation_actions`, and `settings`. Chat messages are enhanced with `userId`, `streamId`, and `eventType` for detailed logging. Settings table includes browser source tokens, stream session timestamps, and dashboard card visibility toggles. Voice AI responses table logs all original and rephrased text with timestamps and speech status. Moderation actions table tracks all Twitch moderation events (bans, timeouts, deletions) with action type, target user, moderator, reason, and duration.
 **Real-time Communication**: A WebSocket server using the `ws` library broadcasts new messages, AI analysis, and connection statuses.
 **Service Layer**: Includes `storage.ts` for database abstraction, `groq-service.ts` for AI analysis and rephrasing, `twitch-client.ts` for Twitch chat interaction and role tracking, and `ai-learning-service.ts` for periodic AI user learning.
 
@@ -67,6 +69,10 @@ Preferred communication style: Simple, everyday language.
     *   Both systems are completely independent with separate enable/disable toggles.
 *   **Clean Live Chat Experience**: Live Chat page displays authentic Twitch messages without AI analysis clutter. Sentiment badges and colored borders removed from chat view for cleaner, more familiar Twitch-like experience.
 *   **Analytics-Focused Sentiment Display**: All sentiment analysis (badges, scores, charts) moved exclusively to Analytics tab, keeping data insights separate from live chat monitoring.
+*   **Enhanced Dashboard with Session Tracking**: Dashboard features a two-tab system ("Today" vs "What You Missed") that filters all stats and charts based on stream session timestamps. "Today" shows activity since the stream session started, while "What You Missed" shows offline activity. Stream sessions can be manually reset via "Start New Stream Session" button, updating the streamSessionStarted timestamp in settings.
+*   **Toggleable Dashboard Stats**: All four stat cards (Total Messages, AI Analyzed, Active Users, Moderation Actions) feature toggle switches in their headers for customizable dashboard layout. Preferences are persisted to the settings table and synced across sessions.
+*   **Database Viewer Page**: Comprehensive internal data management interface at `/database` featuring searchable user tables with profile pictures, role badges (VIP/Mod/Sub), message counts, average sentiment scores, last message preview, and last seen timestamps. Includes three stat cards showing total users, total messages, and AI analyses. Supports role-based filtering (All/VIPs/Mods/Subs) and CSV export functionality for data analysis.
+*   **Moderation Actions Tracking**: Full logging system for Twitch moderation events including bans, timeouts, message deletions, and chat clears. Tracks action type, target user, moderator, reason, duration, and timestamp. Integrated into dashboard stat cards and database viewer.
 *   **Audio Settings Page**: Dedicated `/audio-settings` page consolidating all voice and audio configuration:
     *   Voice & TTS settings (Puter.js voice selection, AI voice toggle, max voice length)
     *   Microphone settings (mic mode, speech cleanup, fallback options, cooldown between replies)

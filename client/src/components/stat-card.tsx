@@ -17,12 +17,27 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, trend, icon: Icon, loading, showToggle, isVisible, onToggleVisibility }: StatCardProps) {
+  const testId = title.toLowerCase().replace(/\s+/g, '-');
+  
   if (showToggle && !isVisible) {
-    return null;
+    return (
+      <Card data-testid={`stat-card-${testId}`} className="opacity-50">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={false}
+              onCheckedChange={onToggleVisibility}
+              data-testid={`switch-${testId}`}
+            />
+          </div>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
-    <Card data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+    <Card data-testid={`stat-card-${testId}`}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <div className="flex items-center gap-2">
@@ -31,7 +46,7 @@ export function StatCard({ title, value, trend, icon: Icon, loading, showToggle,
             <Switch
               checked={isVisible}
               onCheckedChange={onToggleVisibility}
-              data-testid={`switch-${title.toLowerCase().replace(/\s+/g, '-')}`}
+              data-testid={`switch-${testId}`}
             />
           )}
         </div>
@@ -41,7 +56,7 @@ export function StatCard({ title, value, trend, icon: Icon, loading, showToggle,
           <div className="h-8 w-24 animate-pulse rounded bg-muted" />
         ) : (
           <>
-            <div className="text-3xl font-bold text-foreground" data-testid={`stat-value-${title.toLowerCase().replace(/\s+/g, '-')}`}>{value}</div>
+            <div className="text-3xl font-bold text-foreground" data-testid={`stat-value-${testId}`}>{value}</div>
             {trend && (
               <div className="mt-1 flex items-center gap-1 text-xs">
                 {trend.isPositive ? (

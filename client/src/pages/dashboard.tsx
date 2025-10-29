@@ -135,17 +135,28 @@ export default function Dashboard() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (updates: Partial<Settings>) => {
+      console.log("[Dashboard] updateSettingsMutation called with:", updates);
       if (!settings?.id) {
+        console.error("[Dashboard] Settings not loaded! settings:", settings);
         throw new Error("Settings not loaded");
       }
-      return await apiRequest(`/api/settings/${settings.id}`, "PATCH", updates);
+      console.log(`[Dashboard] Making PATCH request to /api/settings/${settings.id}`);
+      const result = await apiRequest(`/api/settings/${settings.id}`, "PATCH", updates);
+      console.log("[Dashboard] PATCH response:", result);
+      return result;
     },
     onSuccess: () => {
+      console.log("[Dashboard] Mutation successful, invalidating settings query");
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    },
+    onError: (error) => {
+      console.error("[Dashboard] Mutation error:", error);
     },
   });
 
   const handleToggleVisibility = (field: keyof Settings, value: boolean) => {
+    console.log(`[Dashboard] Toggling ${field} to ${value}`);
+    console.log(`[Dashboard] Settings ID: ${settings?.id}`);
     updateSettingsMutation.mutate({ [field]: value });
   };
 
