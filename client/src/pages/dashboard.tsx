@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { ChatMessage, AiAnalysis, Settings, ModerationAction } from "@shared/schema";
@@ -35,6 +37,7 @@ interface AuthenticatedUser {
 export default function Dashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("today");
+  const [activeDetailModal, setActiveDetailModal] = useState<string | null>(null);
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery<ChatMessage[]>({
     queryKey: ["/api/messages"],
@@ -133,33 +136,6 @@ export default function Dashboard() {
     },
   });
 
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (updates: Partial<Settings>) => {
-      console.log("[Dashboard] updateSettingsMutation called with:", updates);
-      if (!settings?.id) {
-        console.error("[Dashboard] Settings not loaded! settings:", settings);
-        throw new Error("Settings not loaded");
-      }
-      console.log(`[Dashboard] Making PATCH request to /api/settings/${settings.id}`);
-      const result = await apiRequest(`/api/settings/${settings.id}`, "PATCH", updates);
-      console.log("[Dashboard] PATCH response:", result);
-      return result;
-    },
-    onSuccess: () => {
-      console.log("[Dashboard] Mutation successful, invalidating settings query");
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-    },
-    onError: (error) => {
-      console.error("[Dashboard] Mutation error:", error);
-    },
-  });
-
-  const handleToggleVisibility = (field: keyof Settings, value: boolean) => {
-    console.log(`[Dashboard] Toggling ${field} to ${value}`);
-    console.log(`[Dashboard] Settings ID: ${settings?.id}`);
-    updateSettingsMutation.mutate({ [field]: value });
-  };
-
   const streamSessionStarted = settings?.streamSessionStarted ? new Date(settings.streamSessionStarted) : null;
 
   const todayMessages = streamSessionStarted 
@@ -220,6 +196,27 @@ export default function Dashboard() {
     : 0;
   const isNearQuotaLimit = usagePercentage >= 85;
 
+  const recentMessages = [...currentMessages].reverse().slice(0, 20);
+
+  const userMessageCounts = currentMessages.reduce((acc, msg) => {
+    acc[msg.username] = (acc[msg.username] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const activeUsers = Object.entries(userMessageCounts)
+    .map(([username, count]) => ({ username, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const toxicMessages = currentAnalyses.filter((a) => a.toxicity).length;
+
+  const categoryDistribution = currentAnalyses.reduce((acc, analysis) => {
+    const categories = analysis.categories || ["general"];
+    categories.forEach(category => {
+      acc[category] = (acc[category] || 0) + 1;
+    });
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -246,36 +243,28 @@ export default function Dashboard() {
               value={totalMessages}
               icon={ChatBubbleLeftRightIcon}
               loading={messagesLoading}
-              showToggle
-              isVisible={settings?.dashboardShowTotalMessages ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowTotalMessages", value)}
+              onClick={() => setActiveDetailModal('messages')}
             />
             <StatCard
               title="AI Analyzed"
               value={aiAnalyzed}
               icon={CpuChipIcon}
               loading={analysesLoading}
-              showToggle
-              isVisible={settings?.dashboardShowAiAnalyzed ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowAiAnalyzed", value)}
+              onClick={() => setActiveDetailModal('ai')}
             />
             <StatCard
               title="Active Users"
               value={uniqueUsers}
               icon={UsersIcon}
               loading={messagesLoading}
-              showToggle
-              isVisible={settings?.dashboardShowActiveUsers ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowActiveUsers", value)}
+              onClick={() => setActiveDetailModal('users')}
             />
             <StatCard
               title="Moderation Actions"
               value={moderationActionsCount}
               icon={ShieldCheckIcon}
               loading={moderationActionsLoading}
-              showToggle
-              isVisible={settings?.dashboardShowModActions ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowModActions", value)}
+              onClick={() => setActiveDetailModal('moderation')}
             />
           </div>
 
@@ -368,36 +357,28 @@ export default function Dashboard() {
               value={totalMessages}
               icon={ChatBubbleLeftRightIcon}
               loading={messagesLoading}
-              showToggle
-              isVisible={settings?.dashboardShowTotalMessages ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowTotalMessages", value)}
+              onClick={() => setActiveDetailModal('messages')}
             />
             <StatCard
               title="AI Analyzed"
               value={aiAnalyzed}
               icon={CpuChipIcon}
               loading={analysesLoading}
-              showToggle
-              isVisible={settings?.dashboardShowAiAnalyzed ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowAiAnalyzed", value)}
+              onClick={() => setActiveDetailModal('ai')}
             />
             <StatCard
               title="Active Users"
               value={uniqueUsers}
               icon={UsersIcon}
               loading={messagesLoading}
-              showToggle
-              isVisible={settings?.dashboardShowActiveUsers ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowActiveUsers", value)}
+              onClick={() => setActiveDetailModal('users')}
             />
             <StatCard
               title="Moderation Actions"
               value={moderationActionsCount}
               icon={ShieldCheckIcon}
               loading={moderationActionsLoading}
-              showToggle
-              isVisible={settings?.dashboardShowModActions ?? true}
-              onToggleVisibility={(value) => handleToggleVisibility("dashboardShowModActions", value)}
+              onClick={() => setActiveDetailModal('moderation')}
             />
           </div>
 
@@ -582,6 +563,203 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={activeDetailModal === 'messages'} onOpenChange={(open) => !open && setActiveDetailModal(null)}>
+        <DialogContent className="max-w-2xl" data-testid="modal-messages">
+          <DialogHeader>
+            <DialogTitle>Recent Messages</DialogTitle>
+            <DialogDescription>
+              Last 20 messages from {activeTab === 'today' ? 'today' : 'before your stream session'}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[500px]">
+            <div className="space-y-3 pr-4">
+              {recentMessages.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No messages yet</p>
+              ) : (
+                recentMessages.map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className="flex flex-col gap-1 p-3 rounded-md bg-muted/50"
+                    data-testid={`message-item-${msg.id}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-sm" data-testid={`message-username-${msg.id}`}>
+                        {msg.username}
+                      </span>
+                      <span className="text-xs text-muted-foreground" data-testid={`message-timestamp-${msg.id}`}>
+                        {new Date(msg.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm" data-testid={`message-text-${msg.id}`}>{msg.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeDetailModal === 'ai'} onOpenChange={(open) => !open && setActiveDetailModal(null)}>
+        <DialogContent className="max-w-2xl" data-testid="modal-ai">
+          <DialogHeader>
+            <DialogTitle>AI Analysis Details</DialogTitle>
+            <DialogDescription>
+              Sentiment breakdown and analysis statistics for {activeTab === 'today' ? 'today' : 'missed messages'}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[500px]">
+            <div className="space-y-6 pr-4">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Sentiment Breakdown</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 rounded-md bg-chart-2/10 border border-chart-2/20">
+                    <div className="text-2xl font-bold text-chart-2" data-testid="ai-positive-count">
+                      {positiveMessages}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Positive</div>
+                  </div>
+                  <div className="p-3 rounded-md bg-chart-3/10 border border-chart-3/20">
+                    <div className="text-2xl font-bold" data-testid="ai-neutral-count">
+                      {currentAnalyses.length - positiveMessages - negativeMessages}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Neutral</div>
+                  </div>
+                  <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                    <div className="text-2xl font-bold text-destructive" data-testid="ai-negative-count">
+                      {negativeMessages}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Negative</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Toxicity Detection</h3>
+                <div className="p-3 rounded-md bg-muted/50">
+                  <div className="text-2xl font-bold" data-testid="ai-toxic-count">
+                    {toxicMessages}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Messages flagged as potentially toxic</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Category Distribution</h3>
+                <div className="space-y-2">
+                  {Object.entries(categoryDistribution).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No category data available</p>
+                  ) : (
+                    Object.entries(categoryDistribution).map(([category, count]) => (
+                      <div key={category} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                        <span className="text-sm capitalize">{category}</span>
+                        <Badge variant="secondary" data-testid={`category-count-${category}`}>{count}</Badge>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeDetailModal === 'users'} onOpenChange={(open) => !open && setActiveDetailModal(null)}>
+        <DialogContent className="max-w-2xl" data-testid="modal-users">
+          <DialogHeader>
+            <DialogTitle>Active Users</DialogTitle>
+            <DialogDescription>
+              Users sorted by message count for {activeTab === 'today' ? 'today' : 'missed period'}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[500px]">
+            <div className="space-y-2 pr-4">
+              {activeUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No active users yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {activeUsers.map((user, index) => (
+                    <div 
+                      key={user.username}
+                      className="flex items-center justify-between p-3 rounded-md bg-muted/50"
+                      data-testid={`user-item-${index}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <span className="font-medium text-sm" data-testid={`user-name-${index}`}>
+                          {user.username}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" data-testid={`user-count-${index}`}>
+                        {user.count} {user.count === 1 ? 'message' : 'messages'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeDetailModal === 'moderation'} onOpenChange={(open) => !open && setActiveDetailModal(null)}>
+        <DialogContent className="max-w-2xl" data-testid="modal-moderation">
+          <DialogHeader>
+            <DialogTitle>Moderation Actions</DialogTitle>
+            <DialogDescription>
+              All moderation actions for {activeTab === 'today' ? 'today' : 'missed period'}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[500px]">
+            <div className="space-y-3 pr-4">
+              {currentModerationActions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No moderation actions yet</p>
+              ) : (
+                currentModerationActions.map((action) => (
+                  <div 
+                    key={action.id}
+                    className="p-3 rounded-md bg-muted/50 space-y-2"
+                    data-testid={`moderation-item-${action.id}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant="outline" data-testid={`moderation-type-${action.id}`}>
+                        {action.actionType}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground" data-testid={`moderation-timestamp-${action.id}`}>
+                        {new Date(action.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground">Target:</span>
+                        <span className="font-medium" data-testid={`moderation-target-${action.id}`}>
+                          {action.targetUsername}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground">Moderator:</span>
+                        <span data-testid={`moderation-moderator-${action.id}`}>
+                          {action.moderatorUsername}
+                        </span>
+                      </div>
+                      {action.reason && (
+                        <div className="flex gap-2">
+                          <span className="text-muted-foreground">Reason:</span>
+                          <span className="text-xs" data-testid={`moderation-reason-${action.id}`}>
+                            {action.reason}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
